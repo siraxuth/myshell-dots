@@ -62,3 +62,6 @@ ttf-cascadia-code-nerd
 #
 # Optional, Acer laptops only (install.sh prompts):
 #   Div-Acer-Manager-Max  -> github.com/PXDiv/Div-Acer-Manager-Max/releases (fan/perf control)
+imagemagick
+python-pillow
+libsixel

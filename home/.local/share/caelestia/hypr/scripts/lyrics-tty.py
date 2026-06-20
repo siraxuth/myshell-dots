@@ -12,6 +12,11 @@ import urllib.request, urllib.parse
 
 HOME = os.path.expanduser("~")
 FIG = shutil.which("toilet") or shutil.which("figlet")
+SIXEL = shutil.which("magick") or shutil.which("convert")  # png -> sixel (for non-Latin big text)
+FONT_TTF = next((p for p in (
+    os.path.expanduser("~/.local/share/fonts/SOV_HuaHlim-Bold.ttf"),
+    os.path.expanduser("~/.local/share/fonts/SOV_HuaHlim.ttf"),
+) if os.path.isfile(p)), None)
 RESET = "\x1b[0m"
 BLUE = "\x1b[1;38;5;39m"   # steady blue for the current line
 DIM = "\x1b[2;37m"
@@ -146,6 +151,55 @@ def big(line, cols, rows):
     return wrap_center(line, cols)
 
 
+def term_pixels():
+    """(width_px, height_px) of the terminal, or (0,0) if unknown."""
+    try:
+        import fcntl, struct
+        r, c, xp, yp = struct.unpack("HHHH", fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, b"\0" * 8))
+        return xp, yp
+    except Exception:
+        return 0, 0
+
+
+_sixel_cache = {}
+
+
+def render_sixel(text, cols, rows):
+    """Render `text` big with FONT_TTF -> sixel (for Thai/non-Latin). Returns (sixel, cell_cols)
+    auto-sized to ~90% width / 45% height, or (None, 0) if unavailable. Cached per (text,cols,rows)."""
+    if not (FONT_TTF and SIXEL and text):
+        return None, 0
+    ckey = (text, cols, rows)
+    if ckey in _sixel_cache:
+        return _sixel_cache[ckey]
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        xp, yp = term_pixels()
+        if xp <= 0 or yp <= 0:
+            xp, yp = cols * 8, rows * 17
+        maxw, maxh = int(xp * 0.9), int(yp * 0.45)
+        font = None
+        for size in (240, 200, 160, 130, 104, 84, 66, 52, 40):
+            font = ImageFont.truetype(FONT_TTF, size)
+            bb = font.getbbox(text)
+            if (bb[2] - bb[0]) <= maxw and (bb[3] - bb[1]) <= maxh:
+                break
+        bb = font.getbbox(text)
+        im = Image.new("RGB", (bb[2] - bb[0] + 24, bb[3] - bb[1] + 24), (0, 0, 0))
+        ImageDraw.Draw(im).text((12 - bb[0], 12 - bb[1]), text, font=font, fill=(80, 180, 255))
+        tmp = "/tmp/.lyrics-tty.png"
+        im.save(tmp)
+        six = subprocess.run([SIXEL, tmp, "sixel:-"], capture_output=True, timeout=3).stdout.decode("latin-1")
+        cell_cols = max(1, round(im.width / (xp / cols))) if xp > 0 else cols
+        res = (six, cell_cols) if six else (None, 0)
+    except Exception:
+        res = (None, 0)
+    _sixel_cache[ckey] = res
+    if len(_sixel_cache) > 8:
+        _sixel_cache.pop(next(iter(_sixel_cache)))
+    return res
+
+
 def main():
     if not shutil.which("playerctl"):
         print("playerctl is not installed — run:  sudo pacman -S playerctl")
@@ -166,7 +220,7 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    d, song, lines, idx = lyrics_dir(), None, [], -1
+    d, song, lines, idx, last_state = lyrics_dir(), None, [], -1, None
     try:
         while True:
             if old and select.select([sys.stdin], [], [], 0)[0] and sys.stdin.read(1) in ("q", "Q"):
@@ -192,8 +246,9 @@ def main():
             cols, rows = shutil.get_terminal_size((80, 24))
 
             prev = nxt = status_line = ""
+            ci = -2
             if not title:
-                block = ["(nothing playing)"]
+                cur = "(nothing playing)"
             elif lines:
                 ci = -1
                 for i, (t, _) in enumerate(lines):
@@ -203,33 +258,53 @@ def main():
                         break
                 idx = ci
                 cur = lines[ci][1] if ci >= 0 else "♪"
-                block = big(cur or "♪", cols, rows)
                 prev = lines[ci - 1][1] if ci - 1 >= 0 else ""
                 nxt = lines[ci + 1][1] if 0 <= ci + 1 < len(lines) else ""
             else:
-                block = big(title, cols, rows)
+                cur = title
                 status_line = f"{artist}   ·   (no synced lyrics)"
 
-            body = []
-            if SHOW_PREV and prev:
-                body.append((DIM, center(prev, cols)))
-                body.append(("", ""))
-            for r in block:
-                body.append((BLUE, r))
-            if status_line:
-                body.append(("", ""))
-                body.append((DIM, center(status_line, cols)))
-            elif SHOW_NEXT and nxt:
-                body.append(("", ""))
-                body.append((DIM, center(nxt, cols)))
+            # Redraw only when something visible changes (sixel is expensive / flickers otherwise)
+            state = (title, ci, cur, cols, rows)
+            if state == last_state:
+                time.sleep(0.1)
+                continue
+            last_state = state
 
-            top = max(0, (rows - len(body)) // 2)
-            out = ["\x1b[H\x1b[2J", "\n" * top]
-            for c, txt in body:
-                out.append(f"{c}{txt}{RESET}\n" if c else f"{txt}\n")
+            above = prev if SHOW_PREV else ""
+            below = status_line or (nxt if SHOW_NEXT else "")
+
+            # Thai / non-Latin -> render big with the TTF font as a sixel image; Latin -> block font
+            six, six_cols = render_sixel(cur, cols, rows) if (cur and not cur.isascii()) else (None, 0)
+
+            out = ["\x1b[H\x1b[2J"]
+            if six:
+                pad = max(0, rows // 2 - 5)
+                out.append("\n" * pad)
+                if above:
+                    out.append(DIM + center(above, cols) + RESET + "\n\n")
+                out.append(f"\x1b[{max(0, (cols - six_cols) // 2)}C")
+                out.append(six)
+                out.append("\n")
+                if below:
+                    out.append("\n" + DIM + center(below, cols) + RESET)
+            else:
+                block = big(cur or "♪", cols, rows)
+                body = []
+                if above:
+                    body.append((DIM, center(above, cols)))
+                    body.append(("", ""))
+                for r in block:
+                    body.append((BLUE, r))
+                if below:
+                    body.append(("", ""))
+                    body.append((DIM, center(below, cols)))
+                out.append("\n" * max(0, (rows - len(body)) // 2))
+                for c, txt in body:
+                    out.append(f"{c}{txt}{RESET}\n" if c else f"{txt}\n")
             sys.stdout.write("".join(out))
             sys.stdout.flush()
-            time.sleep(0.15)
+            time.sleep(0.1)
     except Exception:
         cleanup()
 

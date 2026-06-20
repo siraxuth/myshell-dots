@@ -109,7 +109,16 @@ for prof in "$HOME"/.zen/*/; do
 done
 
 # ----------------------------------------------------------------------------
-# 4. Live wallpaper folder
+# 4. Fonts (e.g. SOV_HuaHlim — used by the `lyrics` tool to render Thai big)
+# ----------------------------------------------------------------------------
+if [ -d "$SRC/.local/share/fonts" ]; then
+  mkdir -p "$HOME/.local/share/fonts"
+  cp "$SRC/.local/share/fonts/"*.ttf "$HOME/.local/share/fonts/" 2>/dev/null || true
+  fc-cache -f "$HOME/.local/share/fonts" >/dev/null 2>&1 || true
+fi
+
+# ----------------------------------------------------------------------------
+# 5. Live wallpaper folder
 # ----------------------------------------------------------------------------
 mkdir -p "$HOME/Videos/Wallpapers"
 say "Drop .mp4/.webm files in ~/Videos/Wallpapers for the Super+Shift+W picker."
