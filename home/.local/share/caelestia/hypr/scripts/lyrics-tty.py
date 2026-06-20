@@ -265,10 +265,13 @@ def main():
             return
         d = lyrics_dir()
         os.makedirs(d, exist_ok=True)
-        path = os.path.join(d, f"{artist} - {title}.lrc")
-        if not os.path.exists(path):
+        # Edit the file that's actually used if one exists; otherwise create a TITLE-ONLY file
+        # (artist from NetEase is often Chinese — title-only still matches via find_lrc fallback).
+        path = find_lrc(d, artist, title)
+        if not path:
+            path = os.path.join(d, f"{title.replace('/', '_')}.lrc")
             with open(path, "w", encoding="utf-8") as f:
-                f.write(f"[ti:{title}]\n[ar:{artist}]\n[00:00.00]{title}\n[00:05.00]\n")
+                f.write(f"[ti:{title}]\n[00:00.00]{title}\n[00:05.00]\n")
         editor = os.environ.get("EDITOR") or shutil.which("micro") or shutil.which("nano") or "vi"
         print(f"Editing {path}")
         subprocess.run([editor, path])
@@ -310,7 +313,7 @@ def main():
                         lines = parse_lrc_text(txt)
                         try:
                             os.makedirs(d, exist_ok=True)
-                            open(os.path.join(d, f"{artist} - {title}.lrc"), "w", encoding="utf-8").write(txt)
+                            open(os.path.join(d, f"{title.replace('/', '_')}.lrc"), "w", encoding="utf-8").write(txt)
                         except Exception:
                             pass
             cols, rows = shutil.get_terminal_size((80, 24))
