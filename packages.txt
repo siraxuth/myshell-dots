@@ -27,6 +27,7 @@ libqalculate          # launcher calculator action
 cliphist              # clipboard history
 playerctl             # MPRIS control + used by the `lyrics` terminal karaoke tool
 toilet                # big block font for `lyrics` (Latin only; Thai falls back to large text)
+figlet                # alt big block font for `lyrics`
 wireplumber
 networkmanager
 bluez

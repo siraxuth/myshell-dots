@@ -13,6 +13,9 @@ import urllib.request, urllib.parse
 HOME = os.path.expanduser("~")
 FIG = shutil.which("toilet") or shutil.which("figlet")
 RESET = "\x1b[0m"
+BLUE = "\x1b[1;38;5;39m"   # steady blue for the current line
+DIM = "\x1b[2;37m"
+SHOW_NEXT = any(a in ("--next", "-n") for a in sys.argv[1:])  # default: no next line
 
 
 def lyrics_dir():
@@ -141,7 +144,7 @@ def main():
     signal.signal(signal.SIGINT, cleanup)
     signal.signal(signal.SIGTERM, cleanup)
 
-    d, song, lines, idx, pulse = lyrics_dir(), None, [], -1, 0
+    d, song, lines, idx = lyrics_dir(), None, [], -1
     try:
         while True:
             if old and select.select([sys.stdin], [], [], 0)[0] and sys.stdin.read(1) in ("q", "Q"):
@@ -166,8 +169,9 @@ def main():
                             pass
             cols, rows = shutil.get_terminal_size((80, 24))
 
+            prev = nxt = status_line = ""
             if not title:
-                block, sub = ["(nothing playing)"], "♪"
+                block = ["(nothing playing)"]
             elif lines:
                 ci = -1
                 for i, (t, _) in enumerate(lines):
@@ -175,29 +179,27 @@ def main():
                         ci = i
                     else:
                         break
-                if ci != idx:
-                    idx, pulse = ci, 4
+                idx = ci
                 cur = lines[ci][1] if ci >= 0 else "♪"
                 block = big(cur or "♪", cols)
                 prev = lines[ci - 1][1] if ci - 1 >= 0 else ""
                 nxt = lines[ci + 1][1] if 0 <= ci + 1 < len(lines) else ""
-                sub = (prev, nxt)
             else:
-                block, sub = big(title, cols), f"{artist}   ·   (no synced lyrics)"
+                block = big(title, cols)
+                status_line = f"{artist}   ·   (no synced lyrics)"
 
             body = []
-            if isinstance(sub, tuple):
-                body.append(("\x1b[2;37m", center(sub[0], cols)))
+            if prev:
+                body.append((DIM, center(prev, cols)))
                 body.append(("", ""))
-            colour = "\x1b[1;38;5;213m" if pulse > 0 else "\x1b[1;38;5;111m"
             for r in block:
-                body.append((colour, r))
-            if isinstance(sub, tuple):
+                body.append((BLUE, r))
+            if status_line:
                 body.append(("", ""))
-                body.append(("\x1b[2;37m", center(sub[1], cols)))
-            else:
+                body.append((DIM, center(status_line, cols)))
+            elif SHOW_NEXT and nxt:
                 body.append(("", ""))
-                body.append(("\x1b[2;37m", center(sub, cols)))
+                body.append((DIM, center(nxt, cols)))
 
             top = max(0, (rows - len(body)) // 2)
             out = ["\x1b[H\x1b[2J", "\n" * top]
@@ -205,8 +207,6 @@ def main():
                 out.append(f"{c}{txt}{RESET}\n" if c else f"{txt}\n")
             sys.stdout.write("".join(out))
             sys.stdout.flush()
-            if pulse > 0:
-                pulse -= 1
             time.sleep(0.15)
     except Exception:
         cleanup()
