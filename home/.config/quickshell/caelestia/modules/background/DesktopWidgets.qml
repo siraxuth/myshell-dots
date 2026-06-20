@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Caelestia.Config
 import qs.components
+import qs.services
 
 // Renders the configurable desktop widgets (Config.background.widgets) on the wallpaper.
 // Each entry: { type: "media"|"weather", enabled, position: top/middle/bottom-left/center/right, scale }.
@@ -12,7 +13,7 @@ Item {
     anchors.fill: parent
 
     Repeater {
-        model: Config.background.widgets
+        model: WidgetsPrefs.widgets
 
         Loader {
             id: slot

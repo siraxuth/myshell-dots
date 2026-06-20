@@ -5,23 +5,8 @@ JsonObject {
     property bool wallpaperEnabled: true
     property DesktopClock desktopClock: DesktopClock {}
     property Visualiser visualiser: Visualiser {}
-
-    // Desktop widgets drawn on the wallpaper. type: media | weather (extensible).
-    // position: top/middle/bottom + -left/-center/-right.
-    property list<var> widgets: [
-        {
-            type: "media",
-            enabled: true,
-            position: "bottom-left",
-            scale: 1.0
-        },
-        {
-            type: "weather",
-            enabled: false,
-            position: "top-right",
-            scale: 1.0
-        }
-    ]
+    // NOTE: desktop widgets live in services/WidgetsPrefs.qml (~/.config/caelestia/widgets.json),
+    // not here — a JsonObject list<var> of objects doesn't round-trip reliably.
 
     component DesktopClock: JsonObject {
         property bool enabled: false

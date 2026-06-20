@@ -13,30 +13,17 @@ Item {
 
     required property Session session
 
-    readonly property var widgets: Config.background.widgets
+    readonly property var widgets: WidgetsPrefs.widgets
     readonly property var positions: ["top-left", "top-center", "top-right", "middle-left", "middle-center", "middle-right", "bottom-left", "bottom-center", "bottom-right"]
 
-    function mutate(fn: var): void {
-        const w = (GlobalConfig.background.widgets || []).map(x => Object.assign({}, x));
-        fn(w);
-        GlobalConfig.background.widgets = w;
-    }
     function setField(i: int, k: string, v: var): void {
-        mutate(w => {
-            if (w[i])
-                w[i][k] = v;
-        });
+        WidgetsPrefs.setField(i, k, v);
     }
     function addWidget(): void {
-        mutate(w => w.push({
-            type: "media",
-            enabled: true,
-            position: "bottom-right",
-            scale: 1.0
-        }));
+        WidgetsPrefs.add();
     }
     function delWidget(i: int): void {
-        mutate(w => w.splice(i, 1));
+        WidgetsPrefs.remove(i);
     }
 
     Flickable {

@@ -1,0 +1,14 @@
+[
+  {
+    "type": "media",
+    "enabled": true,
+    "position": "bottom-left",
+    "scale": 1
+  },
+  {
+    "type": "weather",
+    "enabled": false,
+    "position": "top-right",
+    "scale": 1
+  }
+]
