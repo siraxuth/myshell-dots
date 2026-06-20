@@ -26,8 +26,23 @@ Item {
     property real originY: 0
     readonly property int snapPx: 80 // snap distance in REAL px
 
+    // name -> { mode: "WxH@R", scale: n } chosen resolution/scale (defaults to current)
+    property var chosen: ({})
+
     function res(m: var): string {
         return `${m.width}x${m.height}@${m.refreshRate.toFixed(2)}`;
+    }
+    function cMode(m: var): string {
+        return (chosen[m.name] && chosen[m.name].mode) ? chosen[m.name].mode : res(m);
+    }
+    function cScale(m: var): real {
+        return (chosen[m.name] && chosen[m.name].scale) ? chosen[m.name].scale : m.scale;
+    }
+    function setChosen(name: string, key: string, val: var): void {
+        const c = Object.assign({}, chosen);
+        c[name] = Object.assign({}, c[name] || {});
+        c[name][key] = val;
+        chosen = c;
     }
     function effW(m: var): int {
         return Math.round(m.width / m.scale);
@@ -38,12 +53,19 @@ Item {
 
     function initLayout(): void {
         const p = {};
-        for (const m of mons)
+        const c = {};
+        for (const m of mons) {
             p[m.name] = {
                 x: m.x,
                 y: m.y
             };
+            c[m.name] = {
+                mode: res(m),
+                scale: m.scale
+            };
+        }
         pos = p;
+        chosen = c;
         recomputeFit();
         rev++;
     }
@@ -115,13 +137,13 @@ Item {
         const others = mons.filter(m => m.name !== primary.name);
         const lines = [];
         if (arrangeMode === "single") {
-            lines.push(`monitor=${primary.name},${res(primary)},0x0,${primary.scale}`);
+            lines.push(`monitor=${primary.name},${cMode(primary)},0x0,${cScale(primary)}`);
             for (const m of others)
                 lines.push(`monitor=${m.name},disable`);
         } else if (arrangeMode === "mirror") {
-            lines.push(`monitor=${primary.name},${res(primary)},0x0,${primary.scale}`);
+            lines.push(`monitor=${primary.name},${cMode(primary)},0x0,${cScale(primary)}`);
             for (const m of others)
-                lines.push(`monitor=${m.name},${res(m)},0x0,${m.scale},mirror,${primary.name}`);
+                lines.push(`monitor=${m.name},${cMode(m)},0x0,${cScale(m)},mirror,${primary.name}`);
         } else {
             // normalise dragged positions so the top-left is 0,0
             let minX = 1e9, minY = 1e9;
@@ -138,7 +160,7 @@ Item {
                     x: m.x,
                     y: m.y
                 };
-                lines.push(`monitor=${m.name},${res(m)},${Math.round(p.x - minX)}x${Math.round(p.y - minY)},${m.scale}`);
+                lines.push(`monitor=${m.name},${cMode(m)},${Math.round(p.x - minX)}x${Math.round(p.y - minY)},${cScale(m)}`);
             }
         }
         return lines;
@@ -349,6 +371,24 @@ Item {
                 }
             }
 
+            // ── Resolution & scale ────────────────────────────────────────
+            SectionHeader {
+                Layout.topMargin: Tokens.spacing.large
+                title: qsTr("Resolution & scale")
+                description: qsTr("Every mode the monitor reports — applied on Apply")
+            }
+
+            Repeater {
+                model: root.mons
+
+                ModeSelector {
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    monitor: modelData
+                }
+            }
+
             // ── Workspaces ────────────────────────────────────────────────
             SectionHeader {
                 Layout.topMargin: Tokens.spacing.large
@@ -386,6 +426,136 @@ Item {
                 color: Colours.palette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.small
                 text: qsTr("Separate: each monitor keeps its own workspaces and Super+1..0 follows the focused monitor. Shared: workspaces float across monitors (Hyprland default).")
+            }
+        }
+    }
+
+    // Per-monitor resolution + scale picker (lists every mode the monitor reports).
+    component ModeSelector: ColumnLayout {
+        id: sel
+
+        property var monitor
+        property bool open: false
+
+        spacing: Tokens.spacing.small / 2
+
+        StyledRect {
+            Layout.fillWidth: true
+            implicitHeight: hdr.implicitHeight + Tokens.padding.large * 2
+            radius: Tokens.rounding.normal
+            color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+
+            StateLayer {
+                radius: parent.radius
+                onClicked: sel.open = !sel.open
+            }
+
+            RowLayout {
+                id: hdr
+
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.normal
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: sel.monitor.name + (sel.monitor.focused ? " ★" : "")
+                    color: Colours.palette.m3onSurface
+                }
+
+                StyledText {
+                    text: root.cMode(sel.monitor) + "  ·  ×" + root.cScale(sel.monitor)
+                    color: Colours.palette.m3onSurfaceVariant
+                    font.pointSize: Tokens.font.size.small
+                }
+
+                MaterialIcon {
+                    text: sel.open ? "expand_less" : "expand_more"
+                    color: Colours.palette.m3onSurfaceVariant
+                }
+            }
+        }
+
+        Loader {
+            Layout.fillWidth: true
+            active: sel.open
+            visible: active
+
+            sourceComponent: ColumnLayout {
+                width: sel.width
+                spacing: Tokens.spacing.small / 2
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Tokens.padding.normal
+                    spacing: Tokens.spacing.small
+
+                    StyledText {
+                        text: qsTr("Scale")
+                        color: Colours.palette.m3onSurfaceVariant
+                        Layout.rightMargin: Tokens.spacing.normal
+                    }
+
+                    Repeater {
+                        model: [1.0, 1.25, 1.5, 2.0]
+
+                        StyledRect {
+                            required property var modelData
+
+                            readonly property bool picked: Math.abs(root.cScale(sel.monitor) - modelData) < 0.01
+
+                            implicitWidth: st.implicitWidth + Tokens.padding.normal * 2
+                            implicitHeight: st.implicitHeight + Tokens.padding.small * 2
+                            radius: Tokens.rounding.full
+                            color: picked ? Colours.palette.m3primary : Colours.layer(Colours.palette.m3surfaceContainer, 2)
+
+                            StateLayer {
+                                radius: parent.radius
+                                onClicked: root.setChosen(sel.monitor.name, "scale", modelData)
+                            }
+
+                            StyledText {
+                                id: st
+
+                                anchors.centerIn: parent
+                                text: "×" + modelData
+                                color: parent.picked ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                                font.pointSize: Tokens.font.size.small
+                            }
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: sel.monitor.availableModes
+
+                    StyledRect {
+                        required property var modelData
+
+                        readonly property string m: ("" + modelData).replace("Hz", "")
+                        readonly property bool picked: root.cMode(sel.monitor) === m
+
+                        Layout.fillWidth: true
+                        implicitHeight: mt.implicitHeight + Tokens.padding.normal * 2
+                        radius: Tokens.rounding.small
+                        color: picked ? Colours.palette.m3primaryContainer : "transparent"
+
+                        StateLayer {
+                            radius: parent.radius
+                            onClicked: root.setChosen(sel.monitor.name, "mode", parent.m)
+                        }
+
+                        StyledText {
+                            id: mt
+
+                            anchors.left: parent.left
+                            anchors.leftMargin: Tokens.padding.normal
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData
+                            color: parent.picked ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
+                        }
+                    }
+                }
             }
         }
     }
