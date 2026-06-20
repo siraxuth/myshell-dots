@@ -1,0 +1,8 @@
+# state / cache / machine-specific — never commit
+**/fish_variables
+**/__pycache__/
+*.log
+*.bak.*
+*.pyc
+# runtime state dirs (not config)
+**/.cache/

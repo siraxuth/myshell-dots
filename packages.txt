@@ -1,0 +1,47 @@
+# myshell-dots — package list (Arch / CachyOS)
+# Install repo packages with:  sudo pacman -S --needed - < packages.txt
+# (lines starting with # and AUR entries below are ignored by that command;
+#  install.sh handles AUR via yay/paru automatically)
+
+# --- Core compositor + shell ---
+hyprland
+quickshell            # provides `qs` (config tested on 0.3.0)
+xdg-desktop-portal-hyprland
+uwsm                  # universal wayland session manager (caelestia launches via uwsm)
+app2unit
+
+# --- Shell / terminal / prompt ---
+fish
+foot
+fastfetch
+btop
+starship
+
+# --- Desktop bits caelestia uses ---
+fuzzel                # fallback launcher
+cava                  # audio visualiser
+grim                  # screenshots (also used for the live-wallpaper picker workflow)
+brightnessctl
+ddcutil               # external monitor brightness
+libqalculate          # launcher calculator action
+cliphist              # clipboard history
+wireplumber
+networkmanager
+bluez
+bluez-utils
+
+# --- Live wallpaper (Super+Shift+W picker) ---
+ffmpeg                # generates first-frame thumbnails for the picker
+# mpvpaper -> see AUR section (renders the video wallpaper)
+
+# --- Fonts (Material Symbols is required for all the icons) ---
+ttf-material-symbols-variable
+ttf-rubik-vf
+ttf-cascadia-code-nerd
+
+# =====================================================================
+# AUR packages (install with: yay -S <name>   or   paru -S <name>)
+# =====================================================================
+# caelestia-shell-git   # the Quickshell shell framework (our config customizes it)
+# caelestia-cli-git     # the `caelestia` CLI (wallpaper, shell control, scheme, etc.)
+# mpvpaper              # video/live wallpaper via mpv on a layer-shell surface
