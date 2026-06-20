@@ -168,13 +168,35 @@ def term_pixels():
         return 0, 0
 
 
+def png_to_sixel(im, rgb):
+    """Encode an RGBA image as a single-colour, TRANSPARENT sixel (P2=1): only pixels with
+    alpha set are drawn, everything else stays the terminal background (no black box).
+    img2sixel is broken here and ImageMagick paints transparent areas black, so we emit it."""
+    px = im.load()
+    w, h = im.size
+    out = ["\x1bP0;1;0q", f'"1;1;{w};{h}',
+           f"#1;2;{rgb[0] * 100 // 255};{rgb[1] * 100 // 255};{rgb[2] * 100 // 255}"]
+    for y0 in range(0, h, 6):
+        out.append("#1")
+        for x in range(w):
+            b = 0
+            for dy in range(6):
+                yy = y0 + dy
+                if yy < h and px[x, yy][3] > 80:
+                    b |= 1 << dy
+            out.append(chr(63 + b))
+        out.append("-")
+    out.append("\x1b\\")
+    return "".join(out)
+
+
 _sixel_cache = {}
 
 
 def render_sixel(text, cols, rows):
     """Render `text` big with FONT_TTF -> sixel (for Thai/non-Latin). Returns (sixel, cell_cols)
     auto-sized to ~90% width / 45% height, or (None, 0) if unavailable. Cached per (text,cols,rows)."""
-    if not (FONT_TTF and SIXEL and text):
+    if not (FONT_TTF and text):
         return None, 0
     ckey = (text, cols, rows)
     if ckey in _sixel_cache:
@@ -219,11 +241,9 @@ def render_sixel(text, cols, rows):
         bb = im.getbbox()
         if bb:
             im = im.crop(bb)
-        tmp = "/tmp/.lyrics-tty.png"
-        im.save(tmp)
-        six = subprocess.run([SIXEL, tmp, "sixel:-"], capture_output=True, timeout=3).stdout.decode("latin-1")
+        six = png_to_sixel(im, (80, 180, 255))
         cell_cols = max(1, round(im.width / (xp / cols))) if xp > 0 else cols
-        res = (six, cell_cols) if six else (None, 0)
+        res = (six, cell_cols)
     except Exception:
         res = (None, 0)
     _sixel_cache[ckey] = res
