@@ -8,6 +8,7 @@ a big figlet/toilet block font if available; Thai/mixed lines render as large ce
 text — figlet has no Thai glyphs). Ctrl-C / q to quit.
 """
 import os, sys, re, json, glob, time, shutil, subprocess, signal, select, termios, tty
+import urllib.request, urllib.parse
 
 HOME = os.path.expanduser("~")
 FIG = shutil.which("toilet") or shutil.which("figlet")
@@ -53,19 +54,46 @@ def find_lrc(d, artist, title):
     return None
 
 
-def parse_lrc(path):
+def parse_lrc_text(s):
     out = []
-    try:
-        for ln in open(path, encoding="utf-8", errors="replace"):
-            stamps = re.findall(r"\[(\d+):(\d+)(?:[.:](\d+))?\]", ln)
-            text = re.sub(r"\[[^\]]*\]", "", ln).strip()
-            for mm, ss, xx in stamps:
-                t = int(mm) * 60 + int(ss) + (int((xx + "00")[:2]) / 100 if xx else 0)
-                out.append((t, text))
-    except Exception:
-        return []
+    for ln in s.splitlines():
+        stamps = re.findall(r"\[(\d+):(\d+)(?:[.:](\d+))?\]", ln)
+        text = re.sub(r"\[[^\]]*\]", "", ln).strip()
+        for mm, ss, xx in stamps:
+            t = int(mm) * 60 + int(ss) + (int((xx + "00")[:2]) / 100 if xx else 0)
+            out.append((t, text))
     out.sort(key=lambda x: x[0])
     return out
+
+
+def parse_lrc(path):
+    try:
+        return parse_lrc_text(open(path, encoding="utf-8", errors="replace").read())
+    except Exception:
+        return []
+
+
+def _http(url):
+    req = urllib.request.Request(url, headers={"Referer": "https://music.163.com/", "User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=6) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def fetch_netease(artist, title):
+    """Same source the dashboard uses: NetEase search -> best artist match -> song lyric."""
+    try:
+        q = urllib.parse.quote(f"{title} {artist}".strip())
+        res = json.loads(_http(f"https://music.163.com/api/search/get?s={q}&type=1&limit=5"))
+        songs = (res.get("result") or {}).get("songs") or []
+        if not songs:
+            return None
+        ia = str(artist or "").lower()
+        best = next((s for s in songs if (lambda sa: sa and (sa in ia or ia in sa))(
+            str((s.get("artists") or [{}])[0].get("name") or "").lower())), songs[0])
+        lyr = json.loads(_http(f"https://music.163.com/api/song/lyric?id={best['id']}&lv=1&kv=1&tv=-1"))
+        return (lyr.get("lrc") or {}).get("lyric")
+    except Exception:
+        return None
 
 
 def width(s):
@@ -123,8 +151,19 @@ def main():
             if key != song:
                 song = key
                 idx = -1
+                lines = []
                 lrc = find_lrc(d, artist, title)
-                lines = parse_lrc(lrc) if lrc else []
+                if lrc:
+                    lines = parse_lrc(lrc)
+                elif title:
+                    txt = fetch_netease(artist, title)  # same source as the dashboard
+                    if txt:
+                        lines = parse_lrc_text(txt)
+                        try:
+                            os.makedirs(d, exist_ok=True)
+                            open(os.path.join(d, f"{artist} - {title}.lrc"), "w", encoding="utf-8").write(txt)
+                        except Exception:
+                            pass
             cols, rows = shutil.get_terminal_size((80, 24))
 
             if not title:
