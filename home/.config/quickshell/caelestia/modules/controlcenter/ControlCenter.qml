@@ -79,6 +79,8 @@ Item {
             NavRail {
                 id: navRail
 
+                anchors.fill: parent
+
                 screen: root.screen
                 session: root.session
                 initialOpeningComplete: root.initialOpeningComplete

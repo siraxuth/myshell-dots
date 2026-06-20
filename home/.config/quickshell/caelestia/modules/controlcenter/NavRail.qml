@@ -18,13 +18,24 @@ Item {
     implicitWidth: layout.implicitWidth + Tokens.padding.larger * 4
     implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
 
-    ColumnLayout {
-        id: layout
+    Flickable {
+        id: flick
 
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: Tokens.padding.larger * 2
-        spacing: Tokens.spacing.normal
+        anchors.fill: parent
+        contentHeight: layout.implicitHeight
+        contentWidth: width
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        interactive: contentHeight > height
+
+        ColumnLayout {
+            id: layout
+
+            anchors.left: parent.left
+            anchors.leftMargin: Tokens.padding.larger * 2
+            // centre when everything fits; top-align + scroll when it doesn't
+            y: Math.max(0, (flick.height - implicitHeight) / 2)
+            spacing: Tokens.spacing.normal
 
         states: State {
             name: "expanded"
@@ -125,6 +136,7 @@ Item {
                 icon: PaneRegistry.getByIndex(index).icon
                 label: PaneRegistry.getByIndex(index).label
             }
+        }
         }
     }
 
