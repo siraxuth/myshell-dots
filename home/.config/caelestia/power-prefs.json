@@ -1,0 +1,9 @@
+{
+  "acScreenOff": 600,
+  "acLock": 900,
+  "acSuspend": 0,
+  "batScreenOff": 120,
+  "batLock": 300,
+  "batSuspend": 900,
+  "profile": "balanced"
+}

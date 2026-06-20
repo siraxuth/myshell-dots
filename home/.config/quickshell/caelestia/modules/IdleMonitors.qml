@@ -37,7 +37,8 @@ Scope {
     }
 
     Variants {
-        model: GlobalConfig.general.idle.timeouts
+        // Driven by PowerPrefs (per-AC/battery); referencing it also instantiates the singleton.
+        model: PowerPrefs.activeTimeouts
 
         IdleMonitor {
             required property var modelData

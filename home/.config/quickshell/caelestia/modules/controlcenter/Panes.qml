@@ -9,6 +9,7 @@ import "notifications"
 import "launcher"
 import "dashboard"
 import "display"
+import "power"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
