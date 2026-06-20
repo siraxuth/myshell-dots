@@ -34,6 +34,15 @@ bluez-utils
 ffmpeg                # generates first-frame thumbnails for the picker
 # mpvpaper -> see AUR section (renders the video wallpaper)
 
+# --- Applications (caelestia ships configs for these; install.sh symlinks them) ---
+thunar                # file manager
+thunar-volman
+gvfs                  # trash / mounting for thunar
+zed                   # editor (config: keymap.json, settings.json)
+# foot already listed above
+# vscode + zen-browser are AUR (real builds, not flatpak) — see AUR section
+# code               # uncomment for the repo OSS build instead of visual-studio-code-bin
+
 # --- Fonts (Material Symbols is required for all the icons) ---
 ttf-material-symbols-variable
 ttf-rubik-vf
@@ -42,6 +51,11 @@ ttf-cascadia-code-nerd
 # =====================================================================
 # AUR packages (install with: yay -S <name>   or   paru -S <name>)
 # =====================================================================
-# caelestia-shell-git   # the Quickshell shell framework (our config customizes it)
-# caelestia-cli-git     # the `caelestia` CLI (wallpaper, shell control, scheme, etc.)
-# mpvpaper              # video/live wallpaper via mpv on a layer-shell surface
+# caelestia-shell-git     # the Quickshell shell framework (our config customizes it)
+# caelestia-cli-git       # the `caelestia` CLI (wallpaper, shell control, scheme, etc.)
+# mpvpaper                # video/live wallpaper via mpv on a layer-shell surface
+# visual-studio-code-bin  # real Microsoft VSCode (config symlinked to ~/.config/Code/User)
+# zen-browser-bin         # Zen browser, native (NOT flatpak); userChrome symlinked
+#
+# Optional, Acer laptops only (install.sh prompts):
+#   Div-Acer-Manager-Max  -> github.com/PXDiv/Div-Acer-Manager-Max/releases (fan/perf control)

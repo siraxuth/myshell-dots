@@ -42,9 +42,23 @@ if [ "$NO_PKG" = 0 ] && command -v pacman >/dev/null 2>&1; then
     ( cd "$tmp/yay" && makepkg -si --noconfirm )
     AUR="$(command -v yay)"
   fi
-  say "Installing AUR packages (caelestia + mpvpaper)"
-  "$AUR" -S --needed --noconfirm caelestia-shell-git caelestia-cli-git mpvpaper || \
-    warn "AUR install failed — install caelestia-shell-git, caelestia-cli-git, mpvpaper manually."
+  say "Installing AUR packages (caelestia + mpvpaper + apps)"
+  "$AUR" -S --needed --noconfirm caelestia-shell-git caelestia-cli-git mpvpaper \
+    visual-studio-code-bin zen-browser-bin || \
+    warn "Some AUR installs failed — install caelestia-shell-git, caelestia-cli-git, mpvpaper, visual-studio-code-bin, zen-browser-bin manually."
+
+  # Optional: Div-Acer-Manager-Max (Acer laptops only — fan/perf control)
+  if [ -t 0 ]; then
+    read -rp ":: Install Div-Acer-Manager-Max (Acer laptops only)? [y/N] " _damx
+    if [[ "${_damx:-}" =~ ^[Yy] ]]; then
+      tmp="$(mktemp -d)"
+      git clone --depth=1 https://github.com/PXDiv/Div-Acer-Manager-Max.git "$tmp/damx" \
+        && ( cd "$tmp/damx" && { [ -x ./install.sh ] && ./install.sh || bash ./install.sh; } ) \
+        || warn "DAMX install failed — grab it from github.com/PXDiv/Div-Acer-Manager-Max/releases"
+    fi
+  else
+    warn "Non-interactive run — skipping optional Div-Acer-Manager-Max (Acer-only)."
+  fi
 elif [ "$NO_PKG" = 0 ]; then
   warn "pacman not found — skipping packages. This config targets Arch/CachyOS."
   warn "On NixOS: declare the packages in configuration.nix (see README) and run with --no-pkg."
@@ -71,6 +85,28 @@ link() {
   ln -sfn "$target" "$dst"
 }
 for n in btop fastfetch fish foot hypr uwsm starship.toml; do link "$n"; done
+
+# App configs that don't live under ~/.config directly (VSCode / Zed / Thunar / Zen)
+say "Linking app configs (VSCode / Zed / Thunar / Zen)"
+CAEL="$HOME/.local/share/caelestia"
+linkfile() { mkdir -p "$(dirname "$2")"; ln -sfn "$1" "$2"; }
+if [ -f "$CAEL/vscode/settings.json" ]; then
+  linkfile "$CAEL/vscode/settings.json"    "$HOME/.config/Code/User/settings.json"
+  linkfile "$CAEL/vscode/keybindings.json" "$HOME/.config/Code/User/keybindings.json"
+  linkfile "$CAEL/vscode/flags.conf"       "$HOME/.config/code-flags.conf"
+fi
+if [ -f "$CAEL/zed/settings.json" ]; then
+  linkfile "$CAEL/zed/settings.json" "$HOME/.config/zed/settings.json"
+  linkfile "$CAEL/zed/keymap.json"   "$HOME/.config/zed/keymap.json"
+fi
+if [ -f "$CAEL/thunar/uca.xml" ]; then
+  linkfile "$CAEL/thunar/uca.xml"           "$HOME/.config/Thunar/uca.xml"
+  linkfile "$CAEL/thunar/thunar-volman.xml" "$HOME/.config/Thunar/thunar-volman.xml"
+fi
+# Zen userChrome — only if a profile already exists (run zen once first, set toolkit.legacyUserProfileCustomizations.stylesheets=true)
+for prof in "$HOME"/.zen/*/; do
+  [ -d "$prof" ] && [ -f "$CAEL/zen/userChrome.css" ] && linkfile "$CAEL/zen/userChrome.css" "${prof}chrome/userChrome.css"
+done
 
 # ----------------------------------------------------------------------------
 # 4. Live wallpaper folder
