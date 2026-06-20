@@ -134,20 +134,27 @@ def wrap_center(line, cols):
 
 
 def big(line, cols, rows):
-    """Render `line` as large as fits: thick block font (tty-clock), shrinking the font so it
-    stays on ONE line within the terminal width AND height; falls back to wrapped large text
-    (e.g. Thai, or a line too long even at the smallest block font)."""
+    """Render `line` as large as possible with a thick block font (tty-clock). Long lines WRAP
+    to multiple big block-rows (toilet -w cols) rather than shrinking to plain text — picks the
+    largest font whose wrapped height fits, else the smallest block font (still big)."""
     if line and FIG and line.isascii():
         fonts = (None,) if FIG.endswith("figlet") else ("bigmono12", "bigmono9", "mono9")
         maxh = max(3, rows - 4)
+        smallest = None
         for font in fonts:
             try:
-                cmd = [FIG, "-w", "9999"] + ([] if font is None else ["-f", font]) + [line]
+                cmd = [FIG, "-w", str(cols)] + ([] if font is None else ["-f", font]) + [line]
                 art = subprocess.run(cmd, capture_output=True, text=True, timeout=1).stdout.rstrip("\n").split("\n")
-                if art and max((len(r) for r in art), default=0) <= cols and len(art) <= maxh:
+                art = [r for r in art if r.strip()] or art  # drop blank rows
+                if not art:
+                    continue
+                smallest = art
+                if len(art) <= maxh:
                     return [center(r, cols) for r in art]
             except Exception:
                 pass
+        if smallest:  # nothing fit height — use the smallest block font anyway (stays big)
+            return [center(r, cols) for r in smallest]
     return wrap_center(line, cols)
 
 
@@ -174,19 +181,44 @@ def render_sixel(text, cols, rows):
         return _sixel_cache[ckey]
     try:
         from PIL import Image, ImageDraw, ImageFont
+
+        def wrap_px(s, fnt, mw):
+            out, cur = [], ""
+            for ch in s:
+                if not cur or fnt.getbbox(cur + ch)[2] <= mw:
+                    cur += ch
+                else:
+                    out.append(cur)
+                    cur = ch
+            if cur:
+                out.append(cur)
+            return out or [s]
+
         xp, yp = term_pixels()
         if xp <= 0 or yp <= 0:
             xp, yp = cols * 8, rows * 17
-        maxw, maxh = int(xp * 0.9), int(yp * 0.45)
-        font = None
-        for size in (240, 200, 160, 130, 104, 84, 66, 52, 40):
+        maxw, maxh = int(xp * 0.9), int(yp * 0.5)
+        chosen = None
+        for size in (240, 200, 160, 130, 104, 84, 66, 52, 40, 32):
             font = ImageFont.truetype(FONT_TTF, size)
-            bb = font.getbbox(text)
-            if (bb[2] - bb[0]) <= maxw and (bb[3] - bb[1]) <= maxh:
+            wl = wrap_px(text, font, maxw)
+            asc, desc = font.getmetrics()
+            lh = asc + desc
+            if lh * len(wl) <= maxh:
+                chosen = (font, wl, lh)
                 break
-        bb = font.getbbox(text)
-        im = Image.new("RGB", (bb[2] - bb[0] + 24, bb[3] - bb[1] + 24), (0, 0, 0))
-        ImageDraw.Draw(im).text((12 - bb[0], 12 - bb[1]), text, font=font, fill=(80, 180, 255))
+        if not chosen:  # too long even at min size — wrap at min size anyway (stays big)
+            font = ImageFont.truetype(FONT_TTF, 32)
+            wl = wrap_px(text, font, maxw)
+            chosen = (font, wl, sum(font.getmetrics()))
+        font, wl, lh = chosen
+        body = "\n".join(wl)
+        w = max((font.getbbox(l)[2] for l in wl), default=10)
+        im = Image.new("RGBA", (w + 24, lh * len(wl) + 24), (0, 0, 0, 0))  # transparent bg
+        ImageDraw.Draw(im).multiline_text((12, 12), body, font=font, fill=(80, 180, 255, 255), align="center", spacing=0)
+        bb = im.getbbox()
+        if bb:
+            im = im.crop(bb)
         tmp = "/tmp/.lyrics-tty.png"
         im.save(tmp)
         six = subprocess.run([SIXEL, tmp, "sixel:-"], capture_output=True, timeout=3).stdout.decode("latin-1")
