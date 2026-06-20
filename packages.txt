@@ -25,6 +25,8 @@ brightnessctl
 ddcutil               # external monitor brightness
 libqalculate          # launcher calculator action
 cliphist              # clipboard history
+playerctl             # MPRIS control + used by the `lyrics` terminal karaoke tool
+toilet                # big block font for `lyrics` (Latin only; Thai falls back to large text)
 wireplumber
 networkmanager
 bluez
