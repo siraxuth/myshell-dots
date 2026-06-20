@@ -122,6 +122,7 @@ Singleton {
         return {
             enabled: background.enabled,
             wallpaperEnabled: background.wallpaperEnabled,
+            widgets: background.widgets,
             desktopClock: {
                 enabled: background.desktopClock.enabled,
                 scale: background.desktopClock.scale,
