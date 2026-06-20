@@ -256,6 +256,24 @@ def main():
     if not shutil.which("playerctl"):
         print("playerctl is not installed — run:  sudo pacman -S playerctl")
         return
+
+    # `lyrics --edit` : open (or create) the .lrc for the current song in $EDITOR.
+    if "--edit" in sys.argv or "-e" in sys.argv:
+        artist, title = pctl("metadata", "artist"), pctl("metadata", "title")
+        if not title:
+            print("No song is playing.")
+            return
+        d = lyrics_dir()
+        os.makedirs(d, exist_ok=True)
+        path = os.path.join(d, f"{artist} - {title}.lrc")
+        if not os.path.exists(path):
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f"[ti:{title}]\n[ar:{artist}]\n[00:00.00]{title}\n[00:05.00]\n")
+        editor = os.environ.get("EDITOR") or shutil.which("micro") or shutil.which("nano") or "vi"
+        print(f"Editing {path}")
+        subprocess.run([editor, path])
+        return
+
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd) if sys.stdin.isatty() else None
     if old:
