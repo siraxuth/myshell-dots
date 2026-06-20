@@ -113,17 +113,37 @@ def center(s, cols):
     return " " * max(0, (cols - width(s)) // 2) + s
 
 
-def big(line, cols):
-    """Return a list of rows rendering `line` large."""
+def wrap_center(line, cols):
+    """Word-wrap `line` to fit `cols`, each row centred (plain-text fallback)."""
+    rows, cur = [], ""
+    for w in line.split(" "):
+        trial = (cur + " " + w).strip()
+        if not cur or width(trial) <= cols:
+            cur = trial
+        else:
+            rows.append(cur)
+            cur = w
+    if cur:
+        rows.append(cur)
+    return [center(r, cols) for r in (rows or [line])]
+
+
+def big(line, cols, rows):
+    """Render `line` as large as fits: thick block font (tty-clock), shrinking the font so it
+    stays on ONE line within the terminal width AND height; falls back to wrapped large text
+    (e.g. Thai, or a line too long even at the smallest block font)."""
     if line and FIG and line.isascii():
-        try:
-            # bigmono12 = thick solid █ blocks (tty-clock look); figlet falls back to its default
-            cmd = [FIG, line] if FIG.endswith("figlet") else [FIG, "-f", "bigmono12", line]
-            art = subprocess.run(cmd, capture_output=True, text=True, timeout=1).stdout.rstrip("\n").split("\n")
-            return [center(r, cols) for r in art]
-        except Exception:
-            pass
-    return [center(line, cols)]
+        fonts = (None,) if FIG.endswith("figlet") else ("bigmono12", "bigmono9", "mono9")
+        maxh = max(3, rows - 4)
+        for font in fonts:
+            try:
+                cmd = [FIG, "-w", "9999"] + ([] if font is None else ["-f", font]) + [line]
+                art = subprocess.run(cmd, capture_output=True, text=True, timeout=1).stdout.rstrip("\n").split("\n")
+                if art and max((len(r) for r in art), default=0) <= cols and len(art) <= maxh:
+                    return [center(r, cols) for r in art]
+            except Exception:
+                pass
+    return wrap_center(line, cols)
 
 
 def main():
@@ -183,11 +203,11 @@ def main():
                         break
                 idx = ci
                 cur = lines[ci][1] if ci >= 0 else "♪"
-                block = big(cur or "♪", cols)
+                block = big(cur or "♪", cols, rows)
                 prev = lines[ci - 1][1] if ci - 1 >= 0 else ""
                 nxt = lines[ci + 1][1] if 0 <= ci + 1 < len(lines) else ""
             else:
-                block = big(title, cols)
+                block = big(title, cols, rows)
                 status_line = f"{artist}   ·   (no synced lyrics)"
 
             body = []
