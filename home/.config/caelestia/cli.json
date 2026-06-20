@@ -1,0 +1,12 @@
+{
+    "toggles": {
+        "communication": {
+            "discord": {
+                "move": false
+            },
+            "whatsapp": {
+                "move": false
+            }
+        }
+    }
+}

@@ -44,7 +44,7 @@
             "rounding": 2,
             "spacing": 0.7655858722871453
         },
-        "wallpaperEnabled": true
+        "wallpaperEnabled": false
     },
     "bar": {
         "activeWindow": {

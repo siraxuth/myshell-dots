@@ -91,6 +91,8 @@ Scope {
         onReleased: {
             if (!root.launcherInterrupted && !root.hasFullscreen) {
                 const visibilities = Visibilities.getForActive();
+                if (!visibilities.launcher)
+                    visibilities.liveWallpaper = false; // don't stack the launcher over the picker
                 visibilities.launcher = !visibilities.launcher;
             }
             root.launcherInterrupted = false;

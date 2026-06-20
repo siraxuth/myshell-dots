@@ -101,7 +101,8 @@ Item {
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
-            LiveWallpaper.revert();
+            // Esc just closes the picker UI — keep whatever's currently playing (don't stop/revert).
+            LiveWallpaper.commit();
             root.visibilities.liveWallpaper = false;
             event.accepted = true;
         } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
