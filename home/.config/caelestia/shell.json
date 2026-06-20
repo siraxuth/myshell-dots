@@ -124,14 +124,14 @@
         },
         "workspaces": {
             "activeIndicator": true,
-            "activeLabel": "󰮯",
+            "activeLabel": "",
             "activeTrail": false,
-            "label": "  ",
+            "label": "",
             "occupiedBg": false,
-            "occupiedLabel": "󰮯",
+            "occupiedLabel": "",
             "perMonitorWorkspaces": true,
             "showWindows": false,
-            "shown": 9
+            "shown": 10
         }
     },
     "border": {
