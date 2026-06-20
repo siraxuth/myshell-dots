@@ -16,6 +16,7 @@ RESET = "\x1b[0m"
 BLUE = "\x1b[1;38;5;39m"   # steady blue for the current line
 DIM = "\x1b[2;37m"
 SHOW_NEXT = any(a in ("--next", "-n") for a in sys.argv[1:])  # default: no next line
+SHOW_PREV = any(a in ("--prev", "-p") for a in sys.argv[1:])  # default: no previous line
 
 
 def lyrics_dir():
@@ -116,8 +117,9 @@ def big(line, cols):
     """Return a list of rows rendering `line` large."""
     if line and FIG and line.isascii():
         try:
-            art = subprocess.run([FIG, line] if FIG.endswith("figlet") else [FIG, "-f", "future", line],
-                                 capture_output=True, text=True, timeout=1).stdout.rstrip("\n").split("\n")
+            # bigmono12 = thick solid █ blocks (tty-clock look); figlet falls back to its default
+            cmd = [FIG, line] if FIG.endswith("figlet") else [FIG, "-f", "bigmono12", line]
+            art = subprocess.run(cmd, capture_output=True, text=True, timeout=1).stdout.rstrip("\n").split("\n")
             return [center(r, cols) for r in art]
         except Exception:
             pass
@@ -189,7 +191,7 @@ def main():
                 status_line = f"{artist}   ·   (no synced lyrics)"
 
             body = []
-            if prev:
+            if SHOW_PREV and prev:
                 body.append((DIM, center(prev, cols)))
                 body.append(("", ""))
             for r in block:
