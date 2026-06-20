@@ -82,6 +82,30 @@ def parse_lrc(path):
         return []
 
 
+_CREDIT = ("作词", "作曲", "編曲", "编曲", "制作", "製作", "混音", "母带", "和声", "和聲",
+           "吉他", "贝斯", "键盘", "录音", "錄音", "监制", "監製", "出品", "发行", "發行",
+           "producer", "composer", "lyricist", "arranger", "mixing")
+
+
+def _is_cjk(s):
+    chars = [c for c in s if not c.isspace()]
+    if not chars:
+        return False
+    return sum(1 for c in chars if "㐀" <= c <= "鿿") / len(chars) >= 0.5
+
+
+def filter_lyrics(lines):
+    """Drop NetEase credit lines (作词/作曲/…) and Chinese translation lines — but only strip
+    Chinese if the song clearly has non-Chinese lyrics (so genuine Chinese songs survive)."""
+    kept = [(t, x) for (t, x) in lines if x and not any(k in x.lower() for k in _CREDIT)]
+    nonc = [ln for ln in kept if not _is_cjk(ln[1])]
+    return nonc if len(nonc) >= max(3, len(kept) // 3) else kept
+
+
+def to_lrc(lines):
+    return "\n".join(f"[{int(t // 60):02d}:{t % 60:05.2f}]{x}" for t, x in lines)
+
+
 def _http(url):
     req = urllib.request.Request(url, headers={"Referer": "https://music.163.com/", "User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=6) as r:
@@ -310,10 +334,10 @@ def main():
                 elif title:
                     txt = fetch_netease(artist, title)  # same source as the dashboard
                     if txt:
-                        lines = parse_lrc_text(txt)
+                        lines = filter_lyrics(parse_lrc_text(txt))  # strip Chinese credits/translations
                         try:
                             os.makedirs(d, exist_ok=True)
-                            open(os.path.join(d, f"{title.replace('/', '_')}.lrc"), "w", encoding="utf-8").write(txt)
+                            open(os.path.join(d, f"{title.replace('/', '_')}.lrc"), "w", encoding="utf-8").write(to_lrc(lines))
                         except Exception:
                             pass
             cols, rows = shutil.get_terminal_size((80, 24))
