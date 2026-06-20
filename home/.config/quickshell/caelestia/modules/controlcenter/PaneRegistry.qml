@@ -65,6 +65,12 @@ QtObject {
             readonly property string label: "power"
             readonly property string icon: "bolt"
             readonly property string component: "power/PowerPane.qml"
+        },
+        QtObject {
+            readonly property string id: "widgets"
+            readonly property string label: "widgets"
+            readonly property string icon: "widgets"
+            readonly property string component: "widgets/WidgetsPane.qml"
         }
     ]
 

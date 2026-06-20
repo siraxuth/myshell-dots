@@ -10,6 +10,7 @@ import "launcher"
 import "dashboard"
 import "display"
 import "power"
+import "widgets"
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
