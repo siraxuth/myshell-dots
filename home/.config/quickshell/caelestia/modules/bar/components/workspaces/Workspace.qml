@@ -38,7 +38,9 @@ ColumnLayout {
         animate: true
         text: {
             const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
-            const wsName = !ws || ws.name == root.ws ? root.ws : ws.name[0];
+            // Per-monitor: label relative to the monitor's block (1..N) instead of the absolute id (11,12,…)
+            const relId = GlobalConfig.bar.workspaces.perMonitorWorkspaces ? root.ws - root.groupOffset : root.ws;
+            const wsName = !ws || ws.name == root.ws ? relId : ws.name[0];
             let displayName = wsName.toString();
             if (Config.bar.workspaces.capitalisation.toLowerCase() === "upper") {
                 displayName = displayName.toUpperCase();
