@@ -72,6 +72,14 @@ Scope {
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
+        name: "emoji"
+        description: "Toggle emoji picker"
+        onPressed: Emojis.toggle()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
         name: "session"
         description: "Toggle session menu"
         onPressed: {

@@ -7,6 +7,7 @@ import "modules"
 import "modules/drawers"
 import "modules/background"
 import "modules/areapicker"
+import "modules/emoji"
 import "modules/lock"
 import Quickshell
 
@@ -15,6 +16,7 @@ ShellRoot {
 
     Background {}
     Drawers {}
+    EmojiPicker {}
     AreaPicker {}
     Lock {
         id: lock
