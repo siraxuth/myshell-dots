@@ -12,6 +12,11 @@ Scope {
     property bool launcherInterrupted
     readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
 
+    // Eagerly instantiate LiveWallpaper so its Wallpapers-dir watcher runs from boot —
+    // otherwise the singleton (and the watcher) only spawns the first time the picker opens,
+    // and videos dropped in beforehand never get a first-frame thumb auto-generated.
+    Component.onCompleted: LiveWallpaper.refresh()
+
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type

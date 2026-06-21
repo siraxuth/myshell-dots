@@ -4,6 +4,7 @@ import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.controls
+import qs.services
 import qs.modules.bar as Bar
 import qs.modules.bar.popouts as BarPopouts
 
@@ -183,8 +184,9 @@ CustomMouseArea {
                 visibilities.launcher = false;
         }
 
-        // Show dashboard on hover (suppressed while the live-wallpaper picker owns the top slot)
-        const showDashboard = Config.dashboard.showOnHover && !visibilities.liveWallpaper && inTopPanel(panels.dashboard, x, y);
+        // Show dashboard on hover (suppressed while the live-wallpaper picker owns the top
+        // slot, and on monitors where the user disabled it — e.g. while drawing with a pen)
+        const showDashboard = Config.dashboard.showOnHover && !visibilities.liveWallpaper && DashboardPrefs.isEnabledFor(root.screen.name) && inTopPanel(panels.dashboard, x, y);
 
         // Always update visibility based on hover if not in shortcut mode
         if (!dashboardShortcutActive) {
@@ -195,7 +197,7 @@ CustomMouseArea {
         }
 
         // Show/hide dashboard on drag (for touchscreen devices)
-        if (pressed && inTopPanel(panels.dashboard, dragStart.x, dragStart.y) && withinPanelWidth(panels.dashboard, x, y)) {
+        if (DashboardPrefs.isEnabledFor(root.screen.name) && pressed && inTopPanel(panels.dashboard, dragStart.x, dragStart.y) && withinPanelWidth(panels.dashboard, x, y)) {
             if (dragY > Config.dashboard.dragThreshold)
                 visibilities.dashboard = true;
             else if (dragY < -Config.dashboard.dragThreshold)

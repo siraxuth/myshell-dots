@@ -29,17 +29,33 @@ Singleton {
         return `${root.thumbDir}/${video.split("/").pop()}.jpg`;
     }
 
-    // POSIX-safe shell to generate a first-frame jpg for any video missing one
-    readonly property string thumbScript: {
-        if (!videos.length)
+    property bool thumbsDirty: false // videos changed while a thumb job was already running
+
+    // POSIX-safe shell to generate a first-frame jpg for any video missing one.
+    // -nostdin + </dev/null: qs connects a pipe to the process's stdin and ffmpeg
+    // otherwise blocks reading it for interactive keys, so the job never finishes.
+    function thumbScriptFor(vids: var): string {
+        if (!vids.length)
             return "true";
         const q = s => "'" + s.replace(/'/g, "'\\''") + "'";
         let s = `mkdir -p ${q(root.thumbDir)}; `;
-        for (const v of videos) {
+        for (const v of vids) {
             const t = q(root.thumbPath(v));
-            s += `[ -s ${t} ] || ffmpeg -y -ss 0 -i ${q(v)} -frames:v 1 -vf scale=480:-2 ${t} >/dev/null 2>&1; `;
+            s += `[ -s ${t} ] || ffmpeg -nostdin -y -ss 0 -i ${q(v)} -frames:v 1 -vf scale=480:-2 ${t} </dev/null >/dev/null 2>&1; `;
         }
         return s;
+    }
+
+    // Start a thumb job, or mark dirty if one is already running (so it reruns on exit).
+    // Never toggles running=false on a live process: that kills ffmpeg mid-write and was
+    // why thumbnails were not being generated.
+    function genThumbs(): void {
+        if (thumbProc.running) {
+            root.thumbsDirty = true;
+            return;
+        }
+        thumbProc.command = ["sh", "-c", root.thumbScriptFor(root.videos)];
+        thumbProc.running = true;
     }
 
     // Apply a selection live. path === "" means stop / none.
@@ -83,10 +99,27 @@ Singleton {
         listProc.running = true;
     }
 
-    onVideosChanged: {
-        thumbProc.running = false;
-        thumbProc.running = true;
+    // Coalesce bursts of inotify events (a single copy can fire several) into one refresh.
+    Timer {
+        id: watchDebounce
+
+        interval: 400
+        onTriggered: root.refresh()
     }
+
+    // Watch the Wallpapers dir so videos dropped in while qs is running are picked up
+    // automatically — refresh() rescans and onVideosChanged regenerates the missing
+    // first-frame thumbs. close_write/moved_to fire only once the copy is complete, so
+    // ffmpeg never reads a half-written file.
+    Process {
+        running: true
+        command: ["sh", "-c", `mkdir -p "${root.dir}"; exec inotifywait -m -q -e close_write -e moved_to -e delete -e moved_from "${root.dir}"`]
+        stdout: SplitParser {
+            onRead: watchDebounce.restart()
+        }
+    }
+
+    onVideosChanged: genThumbs()
 
     Component.onCompleted: refresh()
 
@@ -105,12 +138,17 @@ Singleton {
         }
     }
 
+    // command is set imperatively by genThumbs() (not bound) so it never changes under a
+    // running process — Quickshell would otherwise kill the job mid-write.
     Process {
         id: thumbProc
 
-        command: ["sh", "-c", root.thumbScript]
-        stdout: StdioCollector {
-            onStreamFinished: root.thumbRev++
+        onExited: {
+            root.thumbRev++; // picker reloads previews for the freshly-written thumbs
+            if (root.thumbsDirty) {
+                root.thumbsDirty = false;
+                root.genThumbs();
+            }
         }
     }
 

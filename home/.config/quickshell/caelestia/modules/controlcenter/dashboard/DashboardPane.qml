@@ -129,6 +129,11 @@ Item {
                     rootItem: root
                 }
 
+                // Per-monitor visibility
+                MonitorsSection {
+                    rootItem: root
+                }
+
                 // Performance Resources Section
                 PerformanceSection {
                     rootItem: root
