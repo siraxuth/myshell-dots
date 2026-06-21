@@ -61,9 +61,11 @@ function wallive --description "Video wallpaper control via mpvpaper"
             echo $video >$path_file # จำ path ไว้ใช้ตอน autostart
             pkill -x mpvpaper
             sleep 0.3
-            # -l bottom: render above caelestia's Background-layer static wallpaper so the
-            # video stays visible after the 25-min qs watchdog restart recreates that layer.
-            mpvpaper -fp -l bottom -o "$mpv_opts" ALL $video
+            # -l background: lowest layer. While live wp is active the shell sets
+            # wallpaperEnabled=false, so caelestia's bg window drops to the Bottom layer
+            # (transparent) and holds the visualiser + desktop widgets — those must stay ABOVE
+            # the video, so mpvpaper goes on the layer below them.
+            mpvpaper -fp -l background -o "$mpv_opts" ALL $video
             echo "wallive: Playing $video"
     end
 end

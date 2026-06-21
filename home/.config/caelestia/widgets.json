@@ -1,8 +1,20 @@
 [
   {
+    "type": "arch",
+    "enabled": true,
+    "position": "middle-center",
+    "scale": 1
+  },
+  {
+    "type": "resources",
+    "enabled": true,
+    "position": "middle-center",
+    "scale": 1
+  },
+  {
     "type": "media",
     "enabled": true,
-    "position": "bottom-left",
+    "position": "top-right",
     "scale": 1
   },
   {

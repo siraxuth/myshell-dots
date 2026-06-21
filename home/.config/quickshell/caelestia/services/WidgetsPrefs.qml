@@ -12,6 +12,18 @@ Singleton {
 
     property var widgets: [
         {
+            type: "arch",
+            enabled: true,
+            position: "middle-center",
+            scale: 1.0
+        },
+        {
+            type: "clock",
+            enabled: true,
+            position: "top-center",
+            scale: 1.0
+        },
+        {
             type: "media",
             enabled: true,
             position: "bottom-left",

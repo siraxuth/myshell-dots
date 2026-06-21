@@ -164,17 +164,10 @@ Item {
                 Layout.fillWidth: true
                 spacing: Tokens.spacing.small
 
-                Pill {
-                    label: qsTr("Media")
-                    icon: "music_note"
-                    on: card.wType === "media"
-                    onChose: root.setField(card.idx, "type", "media")
-                }
-                Pill {
-                    label: qsTr("Weather")
-                    icon: "cloud"
-                    on: card.wType === "weather"
-                    onChose: root.setField(card.idx, "type", "weather")
+                StyledText {
+                    text: qsTr("Widget")
+                    font.bold: true
+                    color: Colours.palette.m3onSurface
                 }
 
                 Item {
@@ -218,6 +211,42 @@ Item {
                         color: Colours.palette.m3error
                         font.pointSize: Tokens.font.size.small
                     }
+                }
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: Tokens.spacing.small
+
+                Pill {
+                    label: qsTr("Media")
+                    icon: "music_note"
+                    on: card.wType === "media"
+                    onChose: root.setField(card.idx, "type", "media")
+                }
+                Pill {
+                    label: qsTr("Weather")
+                    icon: "cloud"
+                    on: card.wType === "weather"
+                    onChose: root.setField(card.idx, "type", "weather")
+                }
+                Pill {
+                    label: qsTr("Clock")
+                    icon: "schedule"
+                    on: card.wType === "clock"
+                    onChose: root.setField(card.idx, "type", "clock")
+                }
+                Pill {
+                    label: qsTr("Arch")
+                    icon: "star"
+                    on: card.wType === "arch"
+                    onChose: root.setField(card.idx, "type", "arch")
+                }
+                Pill {
+                    label: qsTr("System")
+                    icon: "memory"
+                    on: card.wType === "resources"
+                    onChose: root.setField(card.idx, "type", "resources")
                 }
             }
 

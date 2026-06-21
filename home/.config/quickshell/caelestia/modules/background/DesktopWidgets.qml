@@ -28,7 +28,13 @@ Item {
             anchors.margins: Tokens.padding.large * 2
             anchors.leftMargin: Tokens.padding.large * 2 + Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness)
 
-            sourceComponent: modelData.type === "weather" ? weatherComp : mediaComp
+            sourceComponent: ({
+                    media: mediaComp,
+                    weather: weatherComp,
+                    clock: clockComp,
+                    arch: archComp,
+                    resources: resComp
+                })[modelData.type] ?? mediaComp
 
             state: modelData.position ?? "bottom-left"
             states: [
@@ -122,5 +128,23 @@ Item {
         id: weatherComp
 
         WeatherWidget {}
+    }
+
+    Component {
+        id: clockComp
+
+        ClockWidget {}
+    }
+
+    Component {
+        id: archComp
+
+        ArchWidget {}
+    }
+
+    Component {
+        id: resComp
+
+        ResourcesWidget {}
     }
 }
