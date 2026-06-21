@@ -58,15 +58,10 @@ Variants {
         }
         onShownChanged: hoverName = ""
 
-        // dim + click-outside to close
-        Rectangle {
+        // click-outside to close (no dim)
+        MouseArea {
             anchors.fill: parent
-            color: Qt.alpha("black", 0.35)
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Emojis.visible = false
-            }
+            onClicked: Emojis.visible = false
         }
 
         StyledRect {
@@ -78,21 +73,20 @@ Variants {
             radius: Tokens.rounding.large
             color: Colours.palette.m3surface
 
-            // pop-from-centre on open
+            // zoom-from-centre on open
             transformOrigin: Item.Center
-            scale: win.visible ? 1 : 0.7
+            scale: win.visible ? 1 : 0.5
             opacity: win.visible ? 1 : 0
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: 220
-                    easing.type: Easing.OutBack
-                    easing.overshoot: 1.1
+                    duration: 200
+                    easing.type: Easing.OutExpo
                 }
             }
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 150
+                    duration: 120
                 }
             }
 
