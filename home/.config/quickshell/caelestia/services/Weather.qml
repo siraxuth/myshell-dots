@@ -222,6 +222,7 @@ Singleton {
         interval: 3600000 // 1 hour
         running: true
         repeat: true
+        triggeredOnStart: true // fetch immediately (else first run is 1h away — desktop widget showed "No weather")
         onTriggered: fetchWeatherData()
     }
 

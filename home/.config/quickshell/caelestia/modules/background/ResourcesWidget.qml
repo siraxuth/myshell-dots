@@ -9,10 +9,12 @@ import qs.services
 StyledRect {
     id: root
 
+    property bool bgVisible: true
+
     implicitWidth: row.implicitWidth + Tokens.padding.large * 2
     implicitHeight: row.implicitHeight + Tokens.padding.large * 2
     radius: Tokens.rounding.large
-    color: Qt.alpha(Colours.palette.m3surface, 0.55)
+    color: bgVisible ? Qt.alpha(Colours.palette.m3surface, 0.55) : "transparent"
 
     RowLayout {
         id: row

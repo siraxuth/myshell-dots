@@ -11,12 +11,13 @@ StyledRect {
     id: root
 
     readonly property var player: Players.active
+    property bool bgVisible: true
 
     visible: !!player
     implicitWidth: 340
     implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
     radius: Tokens.rounding.large
-    color: Qt.alpha(Colours.palette.m3surface, 0.55)
+    color: bgVisible ? Qt.alpha(Colours.palette.m3surface, 0.55) : "transparent"
 
     RowLayout {
         id: layout

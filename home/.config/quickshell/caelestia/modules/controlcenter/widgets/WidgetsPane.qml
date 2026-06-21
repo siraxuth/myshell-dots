@@ -63,6 +63,7 @@ Item {
                     Layout.topMargin: Tokens.spacing.small
                     wType: modelData.type ?? "media"
                     wEnabled: modelData.enabled ?? true
+                    wBg: modelData.background ?? true
                     wPosition: modelData.position ?? "bottom-left"
                     wScale: modelData.scale ?? 1.0
                     idx: index
@@ -98,6 +99,33 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    component IconBtn: StyledRect {
+        id: ib
+
+        property string icon
+        property color tint: Colours.palette.m3onSurfaceVariant
+        property bool active: false
+        signal clicked
+
+        implicitWidth: 28
+        implicitHeight: 28
+        radius: Tokens.rounding.full
+        color: active ? Colours.palette.m3primary : "transparent"
+
+        StateLayer {
+            radius: parent.radius
+            color: ib.active ? Colours.palette.m3onPrimary : ib.tint
+            onClicked: ib.clicked()
+        }
+
+        MaterialIcon {
+            anchors.centerIn: parent
+            text: ib.icon
+            color: ib.active ? Colours.palette.m3onPrimary : ib.tint
+            font.pointSize: Tokens.font.size.small
         }
     }
 
@@ -145,6 +173,7 @@ Item {
 
         property string wType
         property bool wEnabled
+        property bool wBg
         property string wPosition
         property real wScale
         property int idx
@@ -174,43 +203,28 @@ Item {
                     Layout.fillWidth: true
                 }
 
-                StyledRect {
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    radius: Tokens.rounding.full
-                    color: card.wEnabled ? Colours.palette.m3primary : Colours.palette.m3surfaceContainerHighest
-
-                    StateLayer {
-                        radius: parent.radius
-                        onClicked: root.setField(card.idx, "enabled", !card.wEnabled)
-                    }
-
-                    MaterialIcon {
-                        anchors.centerIn: parent
-                        text: card.wEnabled ? "visibility" : "visibility_off"
-                        color: card.wEnabled ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant
-                        font.pointSize: Tokens.font.size.small
-                    }
+                IconBtn {
+                    icon: "keyboard_arrow_up"
+                    onClicked: WidgetsPrefs.move(card.idx, -1)
                 }
-
-                StyledRect {
-                    implicitWidth: 28
-                    implicitHeight: 28
-                    radius: Tokens.rounding.full
-                    color: "transparent"
-
-                    StateLayer {
-                        radius: parent.radius
-                        color: Colours.palette.m3error
-                        onClicked: root.delWidget(card.idx)
-                    }
-
-                    MaterialIcon {
-                        anchors.centerIn: parent
-                        text: "delete"
-                        color: Colours.palette.m3error
-                        font.pointSize: Tokens.font.size.small
-                    }
+                IconBtn {
+                    icon: "keyboard_arrow_down"
+                    onClicked: WidgetsPrefs.move(card.idx, 1)
+                }
+                IconBtn {
+                    icon: card.wBg ? "format_color_fill" : "format_color_reset"
+                    active: card.wBg
+                    onClicked: root.setField(card.idx, "background", !card.wBg)
+                }
+                IconBtn {
+                    icon: card.wEnabled ? "visibility" : "visibility_off"
+                    active: card.wEnabled
+                    onClicked: root.setField(card.idx, "enabled", !card.wEnabled)
+                }
+                IconBtn {
+                    icon: "delete"
+                    tint: Colours.palette.m3error
+                    onClicked: root.delWidget(card.idx)
                 }
             }
 

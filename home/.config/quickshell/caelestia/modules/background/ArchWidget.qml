@@ -13,6 +13,7 @@ Item {
 
     readonly property string logo: "file:///usr/share/pixmaps/archlinux-logo.svg"
     readonly property real ringRadius: 122
+    property bool bgVisible: true // unused (logo has no card bg) — present so the loader Binding has a target
 
     implicitWidth: 420
     implicitHeight: 420

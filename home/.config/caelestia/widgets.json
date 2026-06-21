@@ -6,20 +6,20 @@
     "scale": 1
   },
   {
-    "type": "resources",
-    "enabled": true,
-    "position": "middle-center",
-    "scale": 1
-  },
-  {
-    "type": "media",
+    "type": "clock",
     "enabled": true,
     "position": "top-right",
     "scale": 1
   },
   {
     "type": "weather",
-    "enabled": false,
+    "enabled": true,
+    "position": "top-right",
+    "scale": 1
+  },
+  {
+    "type": "resources",
+    "enabled": true,
     "position": "top-right",
     "scale": 1
   }

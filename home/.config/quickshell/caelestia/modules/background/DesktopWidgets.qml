@@ -5,38 +5,33 @@ import Caelestia.Config
 import qs.components
 import qs.services
 
-// Renders the configurable desktop widgets (Config.background.widgets) on the wallpaper.
-// Each entry: { type: "media"|"weather", enabled, position: top/middle/bottom-left/center/right, scale }.
+// Renders WidgetsPrefs.widgets on the wallpaper, GROUPED by position: widgets sharing a corner
+// stack in a column (no overlap), so e.g. clock + weather both at top-left flow under each other.
 Item {
     id: root
 
     anchors.fill: parent
 
-    Repeater {
-        model: WidgetsPrefs.widgets
+    readonly property var positions: ["top-left", "top-center", "top-right", "middle-left", "middle-center", "middle-right", "bottom-left", "bottom-center", "bottom-right"]
 
-        Loader {
+    Repeater {
+        model: root.positions
+
+        Item {
             id: slot
 
-            required property var modelData
+            required property string modelData
 
-            active: modelData.enabled ?? true
-            visible: active
-            asynchronous: true
-            scale: modelData.scale ?? 1.0
+            readonly property var items: (WidgetsPrefs.widgets || []).filter(w => (w.position ?? "bottom-left") === modelData && (w.enabled ?? true))
+
+            visible: items.length > 0
+            implicitWidth: stack.implicitWidth
+            implicitHeight: stack.implicitHeight
 
             anchors.margins: Tokens.padding.large * 2
             anchors.leftMargin: Tokens.padding.large * 2 + Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness)
 
-            sourceComponent: ({
-                    media: mediaComp,
-                    weather: weatherComp,
-                    clock: clockComp,
-                    arch: archComp,
-                    resources: resComp
-                })[modelData.type] ?? mediaComp
-
-            state: modelData.position ?? "bottom-left"
+            state: modelData
             states: [
                 State {
                     name: "top-left"
@@ -112,39 +107,60 @@ Item {
                 }
             ]
 
-            transitions: Transition {
-                AnchorAnim {}
+            Column {
+                id: stack
+
+                spacing: Tokens.spacing.large
+
+                Repeater {
+                    model: slot.items
+
+                    Loader {
+                        id: wl
+
+                        required property var modelData
+
+                        anchors.horizontalCenter: slot.modelData.endsWith("-center") ? parent.horizontalCenter : undefined
+                        scale: modelData.scale ?? 1.0
+                        transformOrigin: Item.Center
+                        sourceComponent: ({
+                                media: mediaComp,
+                                weather: weatherComp,
+                                clock: clockComp,
+                                arch: archComp,
+                                resources: resComp
+                            })[modelData.type] ?? mediaComp
+
+                        Binding {
+                            target: wl.item
+                            property: "bgVisible"
+                            value: wl.modelData.background ?? true
+                            when: wl.item !== null
+                        }
+                    }
+                }
             }
         }
     }
 
     Component {
         id: mediaComp
-
         MediaWidget {}
     }
-
     Component {
         id: weatherComp
-
         WeatherWidget {}
     }
-
     Component {
         id: clockComp
-
         ClockWidget {}
     }
-
     Component {
         id: archComp
-
         ArchWidget {}
     }
-
     Component {
         id: resComp
-
         ResourcesWidget {}
     }
 }
