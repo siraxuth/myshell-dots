@@ -17,6 +17,9 @@ Variants {
 
         property int currentCat: 0
         property string query: ""
+        property string hoverName: ""
+        property real hoverX: 0
+        property real hoverY: 0
         readonly property var shown: {
             const cats = Emojis.categories;
             if (query.length > 0) {
@@ -48,10 +51,12 @@ Variants {
             if (visible) {
                 query = "";
                 currentCat = 0;
+                hoverName = "";
                 search.text = "";
                 search.forceActiveFocus();
             }
         }
+        onShownChanged: hoverName = ""
 
         // dim + click-outside to close
         Rectangle {
@@ -65,15 +70,58 @@ Variants {
         }
 
         StyledRect {
+            id: card
+
             anchors.centerIn: parent
             implicitWidth: 780
             implicitHeight: 540
             radius: Tokens.rounding.large
             color: Colours.palette.m3surface
 
+            // pop-from-centre on open
+            transformOrigin: Item.Center
+            scale: win.visible ? 1 : 0.7
+            opacity: win.visible ? 1 : 0
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutBack
+                    easing.overshoot: 1.1
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 150
+                }
+            }
+
             MouseArea {
                 anchors.fill: parent
             } // absorb clicks (don't close)
+
+            // hover tooltip (emoji name)
+            StyledRect {
+                id: tip
+
+                visible: win.hoverName !== ""
+                z: 100
+                x: Math.max(4, Math.min(card.width - width - 4, win.hoverX - width / 2))
+                y: win.hoverY - height - 6
+                implicitWidth: tipText.implicitWidth + Tokens.padding.normal * 2
+                implicitHeight: tipText.implicitHeight + Tokens.padding.small * 2
+                radius: Tokens.rounding.small
+                color: Colours.palette.m3inverseSurface
+
+                StyledText {
+                    id: tipText
+
+                    anchors.centerIn: parent
+                    text: win.hoverName
+                    color: Colours.palette.m3inverseOnSurface
+                    font.pointSize: Tokens.font.size.small
+                }
+            }
 
             Row {
                 anchors.fill: parent
@@ -204,6 +252,16 @@ Variants {
                                 StateLayer {
                                     radius: parent.radius
                                     onClicked: Emojis.copy(cell.modelData.e)
+                                    onContainsMouseChanged: {
+                                        if (containsMouse) {
+                                            const p = cell.mapToItem(card, cell.width / 2, 0);
+                                            win.hoverName = cell.modelData.n;
+                                            win.hoverX = p.x;
+                                            win.hoverY = p.y;
+                                        } else if (win.hoverName === cell.modelData.n) {
+                                            win.hoverName = "";
+                                        }
+                                    }
                                 }
 
                                 StyledText {
