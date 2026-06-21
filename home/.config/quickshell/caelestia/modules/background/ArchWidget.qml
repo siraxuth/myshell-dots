@@ -2,16 +2,64 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Effects
+import Caelestia.Services
+import qs.components
 import qs.services
 
-// Arch logo with a pulsing coloured glow + gentle breathing — a centerpiece for mid-screen.
+// Arch logo with a pulsing coloured glow, gentle breathing, and a circular audio-reactive
+// ring (cava spectrum) orbiting it — a centerpiece for mid-screen.
 Item {
     id: root
 
     readonly property string logo: "file:///usr/share/pixmaps/archlinux-logo.svg"
+    readonly property real ringRadius: 122
 
-    implicitWidth: 260
-    implicitHeight: 260
+    implicitWidth: 420
+    implicitHeight: 420
+
+    // keep cava running while this widget exists
+    ServiceRef {
+        service: Audio.cava
+    }
+
+    // circular spectrum ring
+    Item {
+        id: ring
+
+        anchors.centerIn: parent
+
+        Repeater {
+            model: Audio.cava.values
+
+            Item {
+                id: spoke
+
+                required property int index
+                required property real modelData
+
+                anchors.centerIn: parent
+                rotation: index * 360 / Math.max(1, Audio.cava.values.length)
+
+                Rectangle {
+                    width: 3
+                    radius: 1.5
+                    height: 5 + Math.max(0, spoke.modelData) * 80
+                    antialiasing: true
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: -root.ringRadius - height
+                    color: Colours.palette.m3primary
+                    opacity: 0.85
+
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 90
+                            easing.type: Easing.OutQuad
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // pulsing colour glow behind (colorised + blurred copy of the logo)
     Image {
