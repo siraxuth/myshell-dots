@@ -54,8 +54,6 @@
     "[nginx]": {
         "editor.defaultFormatter": "ahmadalli.vscode-nginx-conf",
     },
-    "gitlens.ai.model": "vscode",
-    "gitlens.ai.vscode.model": "copilot:gpt-4.1",
     "files.associations": {
         "*.ino": "ino",
     },
@@ -91,4 +89,20 @@
     "[astro]": {
         "editor.defaultFormatter": "astro-build.astro-vscode",
     },
+    "explorer.confirmDelete": false,
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "vscode.typescript-language-features",
+    },
+    "js/ts.updateImportsOnFileMove.enabled": "always",
+    "workbench.editorAssociations": {
+        "*.copilotmd": "vscode.markdown.preview.editor",
+        "{git,gitlens,chat-editing-snapshot-text-model,copilot,git-graph,git-graph-3}:/**/*.qrc": "default",
+        "*.qrc": "qt-core.qrcEditor",
+    },
+    "qt-core.additionalQtPaths": [
+        {
+            "name": "Qt-5.15.19-linux-g++-x86_64_from_PATH",
+            "path": "/usr/bin/qtpaths",
+        },
+    ],
 }

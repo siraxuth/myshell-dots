@@ -50,8 +50,18 @@ Useful Fish commands include:
 | `lyrics [--prev] [--next] [--edit]` | Show lyrics in a terminal. |
 | `network [up\|down]` | Toggle configured VPN interfaces. |
 | `cpp <file.cpp> [args…]` | Compile and run a C++ source file. |
+| `cls` / `lutris` | Small shell helpers for clearing the terminal and starting Lutris. |
+| `pacforce <pkg>` / `paruforce <pkg>` | Reinstall a package while allowing file conflicts to be overwritten. |
 
-Hyprland helper scripts, including `workspace-mode.fish`, live in `home/.local/share/caelestia/hypr/scripts/`.
+### Hyprland utilities
+
+- `Print` opens the screenshot picker; `Super+Shift+S` opens a capture dashboard for screenshots and recordings. Screenshot OCR is configured in `hyprland/keybinds.conf`.
+- `Super+V` opens the clipboard picker. The capture tools can open the screenshot editor for annotation.
+- `monitor-watcher.fish`, `lid.fish`, and `workspace-mode.fish` handle monitor changes, laptop-lid behavior, and shared or per-monitor workspaces.
+- `toggle-keyboard-waydroid.fish` switches the keyboard layout for the Waydroid workflow.
+
+Scripts are stored in `home/.local/share/caelestia/hypr/scripts/` and copied into `~/.config/hypr/scripts/` by the installer.
+
 
 See `BUGS.md` for machine-specific notes and fixes, including hybrid graphics, monitor setup, laptop lid behavior, and Thai keyboard layouts.
 

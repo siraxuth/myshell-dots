@@ -29,11 +29,13 @@ case "$choice" in
         grimblast --freeze save area - | copy_notify "Region"
         ;;
     "All screens")
+        sleep 0.15
         grimblast save screen - | copy_notify "All screens"
         ;;
     "Monitor: "*)
         rest="${choice#Monitor: }"
         name="${rest%%  (*}"
+        sleep 0.15
         grim -o "$name" - | copy_notify "$name"
         ;;
     *)

@@ -1,0 +1,384 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --bg:#141417; --panel:rgba(30,30,36,.82); --panel-border:rgba(255,255,255,.08);
+    --accent:#5b8cff; --text:#f0f0f2; --muted:#8a8a93; --btn:#232329; --btn-hover:#2c2c34;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;
+    overflow:hidden;height:100%;}
+
+  /* ---- background: soft radial + faint grid, like a real screenshot app ---- */
+  body{
+    background:
+      radial-gradient(ellipse at 50% 0%, #1d1d24 0%, var(--bg) 60%);
+  }
+
+  #viewport{position:absolute;top:0;left:0;right:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    padding:88px 32px 32px;}
+
+  #stageOuter{position:relative;box-shadow:0 12px 40px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
+    border-radius:6px;overflow:hidden;background:#000;}
+  #stage{position:relative;transform-origin:top left;}
+  #stage img{display:block;user-select:none;-webkit-user-drag:none;}
+  #drawCanvas{position:absolute;top:0;left:0;}
+  #textLayer{position:absolute;top:0;left:0;}
+  #textLayer span{position:absolute;color:transparent;user-select:text;
+    cursor:text;white-space:pre;line-height:1;}
+  #textLayer span::selection{background:rgba(91,140,255,.45);color:transparent;}
+  #textLayer.hidden{display:none;}
+  #drawCanvas.textmode{pointer-events:none;}
+
+  /* ---- floating pill toolbar ---- */
+  #toolbar{position:absolute;top:18px;left:50%;transform:translateX(-50%);
+    background:var(--panel);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--panel-border);border-radius:16px;
+    box-shadow:0 8px 28px rgba(0,0,0,.45);
+    display:flex;align-items:center;gap:2px;padding:6px;z-index:10;}
+  .grp{display:flex;align-items:center;gap:2px;padding:0 7px;position:relative;}
+  .grp:not(:last-child)::after{content:"";position:absolute;right:0;top:4px;bottom:4px;
+    width:1px;background:var(--panel-border);}
+
+  button{background:transparent;border:1px solid transparent;color:var(--muted);
+    border-radius:10px;width:36px;height:36px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .12s,color .12s;}
+  button:hover{background:var(--btn-hover);color:var(--text);}
+  button.on{background:var(--accent);color:#fff;}
+  button.on:hover{background:var(--accent);}
+  button.wide{width:auto;padding:0 12px;gap:6px;font-size:12.5px;font-weight:600;
+    color:var(--text);background:var(--btn);}
+  button.wide:hover{background:var(--btn-hover);}
+  button.primary{background:var(--accent);color:#fff;}
+  button.primary:hover{background:#4879e8;}
+  button.danger-ish:hover{color:#ff6b6b;}
+  button svg{width:18px;height:18px;stroke-width:2;flex:none;}
+
+  .swatch{width:19px;height:19px;border-radius:50%;cursor:pointer;
+    border:2px solid rgba(255,255,255,.12);box-shadow:0 0 0 0 transparent;
+    transition:box-shadow .12s,transform .12s;}
+  .swatch:hover{transform:scale(1.12);}
+  .swatch.on{box-shadow:0 0 0 2px var(--bg),0 0 0 4px #fff;}
+
+  select{background:var(--btn);color:var(--text);border:1px solid var(--panel-border);
+    border-radius:9px;padding:7px 8px;font-size:12px;height:36px;}
+
+  #status{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+    color:var(--muted);font-size:11.5px;background:var(--panel);
+    backdrop-filter:blur(14px);padding:6px 14px;border-radius:20px;
+    border:1px solid var(--panel-border);white-space:nowrap;z-index:10;}
+
+  #toast{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);
+    background:#000d;color:#fff;padding:9px 18px;border-radius:10px;font-size:12.5px;
+    opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:99;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="grp">
+    <button id="tool-select" title="เลือกข้อความ (OCR)"></button>
+    <button id="tool-pen" title="ปากกา"></button>
+    <button id="tool-rect" title="สี่เหลี่ยม"></button>
+    <button id="tool-arrow" title="ลูกศร"></button>
+    <button id="tool-text" title="ข้อความ"></button>
+  </div>
+  <div class="grp">
+    <div class="swatch on" data-c="#ff3b30" style="background:#ff3b30"></div>
+    <div class="swatch" data-c="#ffcc00" style="background:#ffcc00"></div>
+    <div class="swatch" data-c="#34c759" style="background:#34c759"></div>
+    <div class="swatch" data-c="#0a84ff" style="background:#0a84ff"></div>
+    <div class="swatch" data-c="#ffffff" style="background:#ffffff"></div>
+    <div class="swatch" data-c="#000000" style="background:#000000"></div>
+  </div>
+  <div class="grp">
+    <select id="width-sel">
+      <option value="3">บาง</option>
+      <option value="6" selected>กลาง</option>
+      <option value="12">หนา</option>
+    </select>
+  </div>
+  <div class="grp">
+    <button id="btn-undo" title="ย้อนกลับ (Ctrl+Z)"></button>
+    <button id="btn-clear" title="ล้างทั้งหมด" class="danger-ish"></button>
+  </div>
+  <div class="grp">
+    <button id="btn-ocr-redo" class="wide" title="สแกนข้อความละเอียดซ้ำ"></button>
+    <button id="btn-copy-text" class="wide" title="คัดลอกข้อความที่เลือก/ทั้งหมด"></button>
+  </div>
+  <div class="grp">
+    <button id="btn-copy-img" class="primary" title="คัดลอกรูป (Ctrl+C)"></button>
+    <button id="btn-save" class="primary" title="บันทึก (Ctrl+S)"></button>
+    <button id="btn-close" title="ปิด (Esc)"></button>
+  </div>
+</div>
+
+<div id="viewport">
+  <div id="stageOuter">
+    <div id="stage">
+      <img id="shot" src="IMG_SRC_PLACEHOLDER">
+      <canvas id="drawCanvas"></canvas>
+      <div id="textLayer" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<div id="status">กำลังโหลด…</div>
+<div id="toast"></div>
+
+<script>
+/* ---------------- Lucide-style icon set (inline, no network) ---------------- */
+const ICONS = {
+  select: '<path d="M14 4.1 12 6"/><path d="m5.1 8-2.9-.8"/><path d="m6 12-1.9 2"/><path d="M7.2 2.2 8 5.1"/><path d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z"/>',
+  pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  square: '<rect x="4" y="4" width="16" height="16" rx="2"/>',
+  arrow: '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+  type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
+  scan: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  copy: '<rect x="8" y="8" width="14" height="14" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  save: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+};
+const svg = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+function setIcon(id, name){ document.getElementById(id).innerHTML = svg(name); }
+setIcon('tool-select','select'); setIcon('tool-pen','pen'); setIcon('tool-rect','square');
+setIcon('tool-arrow','arrow'); setIcon('tool-text','type');
+setIcon('btn-undo','undo'); setIcon('btn-clear','trash');
+document.getElementById('btn-ocr-redo').innerHTML = svg('scan') + ' สแกนละเอียด';
+document.getElementById('btn-copy-text').innerHTML = svg('copy') + ' ข้อความ';
+document.getElementById('btn-copy-img').innerHTML = svg('image');
+document.getElementById('btn-save').innerHTML = svg('save');
+document.getElementById('btn-close').innerHTML = svg('x');
+
+/* ---------------- bridge to python ---------------- */
+const bridge = (obj) => window.webkit.messageHandlers.bridge.postMessage(JSON.stringify(obj));
+
+const img = document.getElementById('shot');
+const stageOuter = document.getElementById('stageOuter');
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+const textLayer = document.getElementById('textLayer');
+const viewport = document.getElementById('viewport');
+const statusEl = document.getElementById('status');
+const toastEl = document.getElementById('toast');
+
+let W = 0, H = 0;
+let color = '#ff3b30';
+let lineWidth = 6;
+let tool = 'pen';
+let ocrMode = false;
+let actions = [];
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>toastEl.classList.remove('show'), 1800);
+}
+
+/* True centering: stageOuter reserves the real (scaled) layout box so
+   flexbox centers correctly; stage itself stays natural-size and is
+   visually scaled with a transform anchored at its own top-left. */
+function fit(){
+  const availW = viewport.clientWidth - 64;
+  const availH = viewport.clientHeight - 120;
+  const scale = Math.min(1, availW / W, availH / H);
+  stageOuter.style.width = Math.round(W*scale) + 'px';
+  stageOuter.style.height = Math.round(H*scale) + 'px';
+  stage.style.width = W + 'px';
+  stage.style.height = H + 'px';
+  stage.style.transform = `scale(${scale})`;
+}
+
+img.onload = () => {
+  W = img.naturalWidth; H = img.naturalHeight;
+  canvas.width = W; canvas.height = H;
+  textLayer.style.width = W+'px'; textLayer.style.height = H+'px';
+  fit();
+  statusEl.textContent = `${W}×${H}px — กำลังสแกนข้อความ…`;
+  bridge({action:'ready', w:W, h:H});
+};
+window.addEventListener('resize', fit);
+
+/* ---------------- drawing ---------------- */
+function redrawAll(){
+  ctx.clearRect(0,0,W,H);
+  for(const a of actions) paintAction(a);
+}
+function paintAction(a){
+  ctx.strokeStyle = a.color; ctx.fillStyle = a.color;
+  ctx.lineWidth = a.width; ctx.lineCap='round'; ctx.lineJoin='round';
+  if(a.type==='pen'){
+    ctx.beginPath();
+    a.pts.forEach((p,i)=> i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1]));
+    ctx.stroke();
+  } else if(a.type==='rect'){
+    ctx.strokeRect(a.x, a.y, a.w, a.h);
+  } else if(a.type==='arrow'){
+    drawArrow(a.x1,a.y1,a.x2,a.y2,a.color,a.width);
+  } else if(a.type==='text'){
+    ctx.font = `600 ${a.size}px sans-serif`;
+    ctx.fillText(a.text, a.x, a.y);
+  }
+}
+function drawArrow(x1,y1,x2,y2,c,w){
+  ctx.strokeStyle=c; ctx.fillStyle=c; ctx.lineWidth=w; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const ang = Math.atan2(y2-y1,x2-x1), head = 10+w*1.5;
+  ctx.beginPath();
+  ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-head*Math.cos(ang-Math.PI/6), y2-head*Math.sin(ang-Math.PI/6));
+  ctx.lineTo(x2-head*Math.cos(ang+Math.PI/6), y2-head*Math.sin(ang+Math.PI/6));
+  ctx.closePath(); ctx.fill();
+}
+function toCanvasXY(e){
+  const r = canvas.getBoundingClientRect();
+  const sx = W / r.width, sy = H / r.height;
+  return [(e.clientX-r.left)*sx, (e.clientY-r.top)*sy];
+}
+
+let drawing = false, cur = null;
+canvas.addEventListener('pointerdown', e=>{
+  if(ocrMode) return;
+  if(tool==='text'){ placeTextInput(...toCanvasXY(e)); return; }
+  drawing = true;
+  const [x,y] = toCanvasXY(e);
+  if(tool==='pen') cur = {type:'pen', color, width:lineWidth, pts:[[x,y]]};
+  else if(tool==='rect') cur = {type:'rect', color, width:lineWidth, x, y, w:0, h:0, x0:x, y0:y};
+  else if(tool==='arrow') cur = {type:'arrow', color, width:lineWidth, x1:x, y1:y, x2:x, y2:y};
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!drawing || !cur) return;
+  const [x,y] = toCanvasXY(e);
+  if(cur.type==='pen') cur.pts.push([x,y]);
+  else if(cur.type==='rect'){ cur.x=Math.min(cur.x0,x); cur.y=Math.min(cur.y0,y);
+    cur.w=Math.abs(x-cur.x0); cur.h=Math.abs(y-cur.y0); }
+  else if(cur.type==='arrow'){ cur.x2=x; cur.y2=y; }
+  redrawAll(); paintAction(cur);
+});
+function commit(){
+  if(drawing && cur){ actions.push(cur); cur=null; redrawAll(); }
+  drawing = false;
+}
+canvas.addEventListener('pointerup', commit);
+canvas.addEventListener('pointerleave', commit);
+
+function placeTextInput(x,y){
+  const r = canvas.getBoundingClientRect();
+  const scale = r.width / W;
+  const div = document.createElement('div');
+  div.contentEditable = 'true';
+  div.style.position='absolute';
+  div.style.left=(x*scale)+'px'; div.style.top=(y*scale)+'px';
+  div.style.font=`600 ${28*scale}px sans-serif`;
+  div.style.color=color; div.style.minWidth='40px';
+  div.style.outline='1px dashed '+color; div.style.background='rgba(0,0,0,.25)';
+  div.style.borderRadius='3px'; div.style.padding='1px 3px'; div.style.zIndex=50;
+  stage.appendChild(div);
+  div.focus();
+  const commitText = ()=>{
+    const t = div.textContent;
+    if(t && t.trim()){
+      actions.push({type:'text', color, size:28, x, y:y+28, text:t});
+      redrawAll();
+    }
+    div.remove();
+  };
+  div.addEventListener('blur', commitText);
+  div.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); div.blur(); }});
+}
+
+function undo(){ actions.pop(); redrawAll(); }
+function clearAll(){ actions = []; redrawAll(); }
+
+/* ---------------- toolbar wiring ---------------- */
+function setTool(name){
+  tool = name;
+  ocrMode = (name==='select');
+  canvas.classList.toggle('textmode', ocrMode);
+  textLayer.classList.toggle('hidden', !ocrMode);
+  document.querySelectorAll('[id^=tool-]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tool-'+name).classList.add('on');
+}
+document.getElementById('tool-select').onclick = ()=>setTool('select');
+document.getElementById('tool-pen').onclick = ()=>setTool('pen');
+document.getElementById('tool-rect').onclick = ()=>setTool('rect');
+document.getElementById('tool-arrow').onclick = ()=>setTool('arrow');
+document.getElementById('tool-text').onclick = ()=>setTool('text');
+setTool('pen');
+
+document.querySelectorAll('.swatch').forEach(s=>{
+  s.onclick = ()=>{
+    document.querySelectorAll('.swatch').forEach(x=>x.classList.remove('on'));
+    s.classList.add('on'); color = s.dataset.c;
+  };
+});
+document.getElementById('width-sel').onchange = e=> lineWidth = +e.target.value;
+document.getElementById('btn-undo').onclick = undo;
+document.getElementById('btn-clear').onclick = clearAll;
+document.getElementById('btn-close').onclick = ()=> bridge({action:'close'});
+
+/* ---------------- export / copy / save ---------------- */
+function flatten(){
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  octx.drawImage(img, 0, 0, W, H);
+  octx.drawImage(canvas, 0, 0);
+  return out.toDataURL('image/png').split(',')[1];
+}
+document.getElementById('btn-copy-img').onclick = ()=>{ bridge({action:'copyImage', data:flatten()}); toast('คัดลอกรูปแล้ว'); };
+document.getElementById('btn-save').onclick = ()=>{ bridge({action:'save', data:flatten()}); };
+
+document.getElementById('btn-copy-text').onclick = ()=>{
+  const sel = window.getSelection().toString();
+  const text = sel && sel.trim() ? sel : (window.__ocrFullText || '');
+  if(!text){ toast('ยังไม่พบข้อความ'); return; }
+  bridge({action:'copyText', data:text});
+  toast(sel ? 'คัดลอกข้อความที่เลือกแล้ว' : 'คัดลอกข้อความทั้งหมดแล้ว');
+};
+document.getElementById('btn-ocr-redo').onclick = ()=>{
+  statusEl.textContent = 'กำลังสแกนละเอียด…';
+  bridge({action:'rescan'});
+};
+
+/* ---------------- OCR text layer (called from python) ---------------- */
+window.setOcrText = (words, fullText) => {
+  textLayer.innerHTML = '';
+  window.__ocrFullText = fullText || '';
+  for(const w of words){
+    const span = document.createElement('span');
+    span.textContent = w.text;
+    span.style.left = w.left+'px';
+    span.style.top = w.top+'px';
+    span.style.width = w.width+'px';
+    span.style.height = w.height+'px';
+    span.style.fontSize = Math.max(8, w.height*0.9)+'px';
+    textLayer.appendChild(span);
+  }
+  statusEl.textContent = fullText
+    ? `${W}×${H}px — พบข้อความ ${words.length} คำ (กด "เลือกข้อความ" แล้วลากคลุมเพื่อคัดลอก)`
+    : `${W}×${H}px — ไม่พบข้อความในภาพ`;
+};
+
+/* ---------------- keyboard shortcuts ---------------- */
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ bridge({action:'close'}); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='z'){ undo(); e.preventDefault(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='s'){ document.getElementById('btn-save').click(); e.preventDefault(); return; }
+  if((e.ctrlKey||e.metaKey) && e.key==='c' && !ocrMode){ document.getElementById('btn-copy-img').click(); e.preventDefault(); return; }
+});
+</script>
+</body>
+</html>

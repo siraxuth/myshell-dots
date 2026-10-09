@@ -45,3 +45,23 @@ if status is-interactive
 end
 export PATH="$HOME/.local/bin:$PATH"
 oh-my-posh init fish --config ~/.config/oh-my-posh/clean-detailed.omp.json | source
+
+# pnpm
+set -gx PNPM_HOME "/home/siraxuth/.local/share/pnpm"
+if not string match -q -- "$PNPM_HOME/bin" $PATH
+  set -gx PATH "$PNPM_HOME/bin" $PATH
+end
+# pnpm end
+set -gx VOLTA_HOME "$HOME/.volta"
+set -gx PATH "$VOLTA_HOME/bin" $PATH
+
+
+# Added by Antigravity CLI installer
+set -gx PATH "/home/siraxuth/.local/bin" $PATH
+
+# Qwen Code PATH block begin
+set -gx PATH '/home/siraxuth/.local/bin' $PATH
+# Qwen Code PATH block end
+
+# Hermes Agent command
+fish_add_path "$HOME/.local/bin"

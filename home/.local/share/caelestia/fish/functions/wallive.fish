@@ -65,7 +65,9 @@ function wallive --description "Video wallpaper control via mpvpaper"
             # wallpaperEnabled=false, so caelestia's bg window drops to the Bottom layer
             # (transparent) and holds the visualiser + desktop widgets — those must stay ABOVE
             # the video, so mpvpaper goes on the layer below them.
-            mpvpaper -fp -l background -o "$mpv_opts" ALL $video
+            # -s auto-stop: kill mpv decode entirely when wallpaper fully hidden (frees CPU/RAM,
+            # more than -p pause). Tradeoff: brief flicker on uncover.
+            mpvpaper -fs -l background -o "$mpv_opts" ALL $video
             echo "wallive: Playing $video"
     end
 end
