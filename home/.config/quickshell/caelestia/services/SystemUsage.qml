@@ -19,6 +19,15 @@ Singleton {
     property string gpuName: ""
     property real gpuPerc
     property real gpuTemp
+    property bool gpuMetricsAvailable
+    property bool gpuPollFailed
+    property string gpuMetricsError: ""
+
+    onGpuTypeChanged: {
+        // Restart detection after auto-detection settles so the command uses the final GPU type.
+        gpuNameDetect.running = false;
+        Qt.callLater(() => gpuNameDetect.running = true);
+    }
 
     // Memory properties
     property real memUsed
@@ -43,6 +52,11 @@ Singleton {
     property real lastCpuTotal
 
     property int refCount
+
+    onRefCountChanged: {
+        if (root.refCount > 0 && root.gpuPollFailed && root.gpuType === "NVIDIA")
+            gpuRetry.restart();
+    }
 
     function cleanCpuName(name: string): string {
         return name.replace(/\(R\)|\(TM\)|CPU|\d+(?:th|nd|rd|st) Gen |Core |Processor/gi, "").replace(/\s+/g, " ").trim();
@@ -103,7 +117,7 @@ Singleton {
             const chip = block.split("\n", 1)[0].toLowerCase();
             // Only accept a DRM GPU sensor. The previous PCI-wide parser could
             // accidentally report a Wi-Fi or NVMe temperature as the GPU value.
-            if (!/(^|[-_])(amdgpu|radeon|nouveau|i915|xe)([-_]|$)/.test(chip))
+            if (!/(^|[-_])(amdgpu|radeon|nouveau|nvidia|nvidia_gpu|i915|xe)([-_]|$)/.test(chip))
                 continue;
 
             const temperatures = root.temperaturesFromSensorBlock(block);
@@ -148,7 +162,7 @@ Singleton {
         onTriggered: {
             stat.reload();
             meminfo.reload();
-            if (root.gpuType === "GENERIC" || root.gpuType === "NVIDIA")
+            if (root.gpuType === "GENERIC" || (root.gpuType === "NVIDIA" && !root.gpuPollFailed))
                 gpuUsage.running = true;
         }
     }
@@ -294,30 +308,25 @@ Singleton {
         id: gpuNameDetect
 
         running: true
-        command: ["sh", "-c", "nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || glxinfo -B 2>/dev/null | grep 'Device:' | cut -d':' -f2 | cut -d'(' -f1 || lspci 2>/dev/null | grep -i 'vga\\|3d controller\\|display' | head -1"]
+        command: root.gpuType === "NVIDIA"
+            ? ["sh", "-c", "nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || lspci 2>/dev/null | grep -i -E '(VGA|3D controller|Display controller).*NVIDIA' | head -1"]
+            : root.gpuType === "INTEL"
+                ? ["sh", "-c", "lspci 2>/dev/null | grep -i -E '(VGA|3D controller|Display controller).*Intel' | head -1"]
+                : ["sh", "-c", "glxinfo -B 2>/dev/null | grep 'Device:' | cut -d':' -f2 | cut -d'(' -f1 || lspci 2>/dev/null | grep -i -E '(VGA|3D controller|Display controller)' | head -1"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const output = text.trim();
                 if (!output)
                     return;
 
-                // Check if it's from nvidia-smi (clean GPU name)
-                if (output.toLowerCase().includes("nvidia") || output.toLowerCase().includes("geforce") || output.toLowerCase().includes("rtx") || output.toLowerCase().includes("gtx")) {
-                    root.gpuName = root.cleanGpuName(output);
-                } else if (output.toLowerCase().includes("rx")) {
-                    root.gpuName = root.cleanGpuName(output);
-                } else {
-                    // Parse lspci output: extract name from brackets or after colon
-                    // Handles cases like [AMD/ATI] Navi 21 [Radeon RX 6800/6800 XT / 6900 XT] (rev c0)
-                    const bracketMatch = output.match(/\[([^\]]+)\][^\[]*$/);
-                    if (bracketMatch) {
-                        root.gpuName = root.cleanGpuName(bracketMatch[1]);
-                    } else {
-                        const colonMatch = output.match(/:\s*(.+)/);
-                        if (colonMatch)
-                            root.gpuName = root.cleanGpuName(colonMatch[1]);
-                    }
-                }
+                // lspci includes a class code like [0300] before the device name.
+                // Select the model label instead of accidentally reporting that code.
+                const labels = output.match(/\[(?:GeForce|Quadro|RTX|GTX|UHD|Iris|Arc|Radeon|RX)[^\]]*\]/i);
+                const nvidiaModel = output.match(/NVIDIA Corporation\s+(.+?)(?:\s+\(rev|$)/i);
+                const intelModel = output.match(/Intel Corporation\s+(.+?)(?:\s+\(rev|$)/i);
+                const amdModel = output.match(/(?:AMD\/ATI|Advanced Micro Devices(?:, Inc\.)?)\s+(.+?)(?:\s+\(rev|$)/i);
+                const model = labels ? labels[0].slice(1, -1) : nvidiaModel ? nvidiaModel[1] : intelModel ? intelModel[1] : amdModel ? amdModel[1] : output;
+                root.gpuName = root.cleanGpuName(model.replace(/\s+\[[0-9a-f]{4}:[0-9a-f]{4}\]$/i, ""));
             }
         }
     }
@@ -326,7 +335,7 @@ Singleton {
         id: gpuTypeCheck
 
         running: !GlobalConfig.services.gpuType
-        command: ["sh", "-c", "if command -v nvidia-smi &>/dev/null && nvidia-smi -L &>/dev/null; then echo NVIDIA; elif ls /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null | grep -q .; then echo GENERIC; else echo NONE; fi"]
+        command: ["sh", "-c", "if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then echo NVIDIA; elif ls /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null | grep -q .; then echo GENERIC; else found_nvidia=0; found_intel=0; for card in /sys/class/drm/card[0-9]*; do [ -r \"$card/device/vendor\" ] || continue; vendor=$(cat \"$card/device/vendor\"); [ \"$vendor\" = 0x10de ] && found_nvidia=1; [ \"$vendor\" = 0x8086 ] && found_intel=1; done; if [ \"$found_nvidia\" = 1 ]; then echo NVIDIA; elif [ \"$found_intel\" = 1 ]; then echo INTEL; else echo NONE; fi; fi"]
         stdout: StdioCollector {
             onStreamFinished: root.autoGpuType = text.trim()
         }
@@ -336,22 +345,57 @@ Singleton {
         id: gpuUsage
 
         command: root.gpuType === "GENERIC" ? ["sh", "-c", "cat /sys/class/drm/card*/device/gpu_busy_percent"] : root.gpuType === "NVIDIA" ? ["nvidia-smi", "--query-gpu=utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"] : ["echo"]
+        stderr: StdioCollector {
+            onStreamFinished: {
+                const message = text.toLowerCase();
+                if (message.includes("driver/library version mismatch"))
+                    root.gpuMetricsError = qsTr("Restart after updating the NVIDIA driver");
+            }
+        }
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.gpuType === "GENERIC") {
                     const percs = text.trim().split("\n").map(value => parseInt(value, 10)).filter(value => Number.isFinite(value));
                     root.gpuPerc = percs.length > 0 ? Math.min(1, Math.max(0, root.average(percs) / 100)) : 0;
+                    root.gpuMetricsAvailable = percs.length > 0;
                 } else if (root.gpuType === "NVIDIA") {
                     const [usage, temp] = text.trim().split(",");
                     const usageValue = parseInt(usage, 10);
                     const temperatureValue = parseInt(temp, 10);
                     root.gpuPerc = Number.isFinite(usageValue) ? Math.min(1, Math.max(0, usageValue / 100)) : 0;
                     root.gpuTemp = Number.isFinite(temperatureValue) ? temperatureValue : 0;
+                    root.gpuMetricsAvailable = Number.isFinite(usageValue);
+                    if (root.gpuMetricsAvailable) {
+                        root.gpuMetricsError = "";
+                        root.gpuPollFailed = false;
+                        gpuRetry.stop();
+                    }
                 } else {
                     root.gpuPerc = 0;
                     root.gpuTemp = 0;
+                    root.gpuMetricsAvailable = false;
                 }
             }
+        }
+        onExited: (code, status) => {
+            if (root.gpuType === "NVIDIA" && (code !== 0 || !root.gpuMetricsAvailable)) {
+                root.gpuMetricsAvailable = false;
+                root.gpuPollFailed = true;
+                if (!root.gpuMetricsError)
+                    root.gpuMetricsError = qsTr("NVIDIA driver metrics unavailable");
+                gpuRetry.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: gpuRetry
+
+        interval: 30000
+        repeat: false
+        onTriggered: {
+            if (root.refCount > 0 && root.gpuType === "NVIDIA")
+                gpuUsage.running = true;
         }
     }
 
@@ -366,6 +410,9 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 root.cpuTemp = root.cpuTemperatureFromSensors(text);
+
+                if (root.gpuType === "NVIDIA" && root.gpuTemp <= 0)
+                    root.gpuTemp = root.gpuTemperatureFromSensors(text);
 
                 if (root.gpuType !== "GENERIC")
                     return;

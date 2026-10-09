@@ -24,6 +24,13 @@ Region {
 
     R {
         panel: root.panels.dashboard
+        // Add the dashboard bounds to the input region while hover-open. Its
+        // left edge can sit outside the normal interaction area, especially
+        // when dragMaskPadding is active; without this, moving into the panel
+        // makes Interactions lose containsMouse and immediately hides it.
+        intersection: root.panels.dashboard.visible && root.win.contentItem.Config.dashboard.showOnHover
+            ? Intersection.Union
+            : Intersection.Subtract
         y: 0
         height: panel.height * (1 - root.panels.dashboard.offsetScale) + root.borderThickness
     }

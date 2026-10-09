@@ -104,9 +104,9 @@ Item {
                     visible: Config.dashboard.performance.showGpu && SystemUsage.gpuType !== "NONE"
                     icon: "desktop_windows"
                     title: SystemUsage.gpuName ? `GPU - ${SystemUsage.gpuName}` : qsTr("GPU")
-                    mainValue: `${Math.round(SystemUsage.gpuPerc * 100)}%`
-                    mainLabel: qsTr("Usage")
-                    secondaryValue: root.displayTemp(SystemUsage.gpuTemp)
+                    mainValue: SystemUsage.gpuMetricsAvailable ? `${Math.round(SystemUsage.gpuPerc * 100)}%` : "—"
+                    mainLabel: SystemUsage.gpuMetricsAvailable ? qsTr("Usage") : SystemUsage.gpuMetricsError || qsTr("Usage unavailable")
+                    secondaryValue: SystemUsage.gpuTemp > 0 ? root.displayTemp(SystemUsage.gpuTemp) : "—"
                     secondaryLabel: qsTr("Temp")
                     usage: SystemUsage.gpuPerc
                     temperature: SystemUsage.gpuTemp

@@ -7,6 +7,7 @@ import Caelestia.Config
 import qs.components
 import qs.components.containers
 import qs.services
+import "../widgets"
 
 Variants {
     model: Screens.screens.filter(s => GlobalConfig.forScreen(s.name).background.enabled)
@@ -160,6 +161,8 @@ Variants {
             }
         }
 
-        DesktopWidgets {}
+        WidgetRuntime {
+            screen: win.modelData
+        }
     }
 }

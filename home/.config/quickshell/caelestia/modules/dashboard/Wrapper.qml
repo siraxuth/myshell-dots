@@ -36,6 +36,8 @@ Item {
     visible: offsetScale < 1
     x: root.onLeft ? (-implicitWidth - 5) * offsetScale : (parent.width - width) / 2
     y: root.onLeft ? (parent.height - height) / 2 : (-implicitHeight - 5) * offsetScale
+    width: implicitWidth
+    height: implicitHeight
     implicitHeight: content.implicitHeight
     implicitWidth: content.implicitWidth || 854 // Hard coded fallback for first open
     opacity: 1 - offsetScale

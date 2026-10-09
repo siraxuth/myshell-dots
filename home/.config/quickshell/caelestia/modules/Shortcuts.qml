@@ -10,9 +10,21 @@ Scope {
     id: root
 
     property bool launcherInterrupted
+    property var pendingLiveWallpaperVisibility: null
     readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
 
     Component.onCompleted: Wallpapers.refreshWallpapers()
+
+    Timer {
+        id: openLiveWallpaperTimer
+        interval: 80
+        onTriggered: {
+            const visibilities = root.pendingLiveWallpaperVisibility;
+            root.pendingLiveWallpaperVisibility = null;
+            if (visibilities && !root.hasFullscreen && Visibilities.getForActive() === visibilities)
+                visibilities.liveWallpaper = true;
+        }
+    }
 
     // qmllint disable unresolved-type
     CustomShortcut {
@@ -20,6 +32,18 @@ Scope {
         name: "controlCenter"
         description: "Open control center"
         onPressed: SettingsOpener.open()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "widgetEditor"
+        description: "Open desktop widget canvas editor"
+        onPressed: {
+            const focusedName = Hypr.focusedMonitor?.name ?? "";
+            const screen = Quickshell.screens.find(item => item.name === focusedName) ?? Quickshell.screens[0];
+            WidgetEditorController.open(screen?.name ?? "", "");
+        }
     }
     // qmllint disable unresolved-type
     CustomShortcut {
@@ -56,17 +80,29 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const v = Visibilities.getForActive();
-            const next = !v.liveWallpaper;
-            if (next) {
-                // Close every other drawer so the picker owns the screen (and the keyboard).
-                v.launcher = false;
-                v.dashboard = false;
-                v.session = false;
-                v.sidebar = false;
-                v.utilities = false;
-                v.osd = false;
+            if (!v)
+                return;
+
+            if (v.liveWallpaper || root.pendingLiveWallpaperVisibility === v) {
+                openLiveWallpaperTimer.stop();
+                root.pendingLiveWallpaperVisibility = null;
+                v.liveWallpaper = false;
+                return;
             }
-            v.liveWallpaper = next;
+
+            // Release competing drawers and popouts before acquiring the layer-shell focus grab.
+            v.launcher = false;
+            v.dashboard = false;
+            v.session = false;
+            v.sidebar = false;
+            v.utilities = false;
+            v.osd = false;
+            Visibilities.popoutsByMonitor.get(Hypr.focusedMonitor)?.close();
+
+            // Activate on the next frame so the drawer loader and focus grab see a clean state.
+            v.liveWallpaper = false;
+            root.pendingLiveWallpaperVisibility = v;
+            openLiveWallpaperTimer.restart();
         }
     }
 

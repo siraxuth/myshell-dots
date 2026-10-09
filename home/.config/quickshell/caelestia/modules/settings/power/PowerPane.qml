@@ -15,29 +15,6 @@ Item {
     id: root
 
     required property Session session
-    property bool discreteGpuAvailable: false
-    property bool discreteGpuPowerSaving: true
-    property bool discreteGpuChangePending: false
-    property string discreteGpuPciAddress: ""
-    property string discreteGpuRuntimeStatus: ""
-    property string discreteGpuError: ""
-
-    function refreshDiscreteGpu(): void {
-        discreteGpuStatus.exec(["sh", "-c", "for d in /sys/bus/pci/devices/*; do [ -r \"$d/vendor\" ] || continue; [ \"$(cat \"$d/vendor\")\" = 0x10de ] || continue; c=$(cat \"$d/class\" 2>/dev/null); case \"$c\" in 0x030000|0x030200) printf '%s|%s|%s\\n' \"${d##*/}\" \"$(cat \"$d/power/control\" 2>/dev/null)\" \"$(cat \"$d/power/runtime_status\" 2>/dev/null)\";; esac; done"]);
-    }
-
-    function setDiscreteGpuPowerSaving(enabled: bool): void {
-        if (!discreteGpuAvailable || discreteGpuChangePending)
-            return;
-
-        const mode = enabled ? "auto" : "on";
-        const script = "set -eu; mode=\"$1\"; gpu=\"$2\"; case \"$mode\" in auto|on) ;; *) exit 2;; esac; printf '%s\\n' \"$gpu\" | grep -Eq '^[[:xdigit:]]{4}:[[:xdigit:]]{2}:[[:xdigit:]]{2}\\.[0-7]$' || exit 2; slot=\"${gpu%.*}\"; found=0; for d in /sys/bus/pci/devices/\"$slot\".*; do [ -r \"$d/vendor\" ] || continue; [ \"$(cat \"$d/vendor\")\" = 0x10de ] || continue; printf '%s\\n' \"$mode\" > \"$d/power/control\"; found=1; done; [ \"$found\" = 1 ]";
-        discreteGpuChangePending = true;
-        discreteGpuError = "";
-        discreteGpuCommand.exec(["pkexec", "sh", "-c", script, "caelestia-gpu-power", mode, discreteGpuPciAddress]);
-    }
-
-    Component.onCompleted: refreshDiscreteGpu()
 
     PaneFrame {
         anchors.fill: parent
@@ -52,39 +29,6 @@ Item {
 
                 width: parent.width
                 spacing: Tokens.spacing.normal
-
-                Timer {
-                    interval: 10000
-                    repeat: true
-                    running: root.session.activeIndex === PaneRegistry.getIndexById("power")
-                    onTriggered: root.refreshDiscreteGpu()
-                }
-
-                Process {
-                    id: discreteGpuStatus
-
-                    stdout: StdioCollector {
-                        onStreamFinished: {
-                            const line = text.trim().split("\n")[0] ?? "";
-                            const values = line.split("|");
-                            root.discreteGpuAvailable = values.length === 3 && values[0].length > 0;
-                            root.discreteGpuPciAddress = root.discreteGpuAvailable ? values[0] : "";
-                            root.discreteGpuPowerSaving = root.discreteGpuAvailable && values[1] === "auto";
-                            root.discreteGpuRuntimeStatus = root.discreteGpuAvailable ? values[2] : "";
-                        }
-                    }
-                }
-
-                Process {
-                    id: discreteGpuCommand
-
-                    onExited: (exitCode, exitStatus) => {
-                        root.discreteGpuChangePending = false;
-                        if (exitCode !== 0)
-                            root.discreteGpuError = qsTr("Could not change GPU power mode. Authorization may have been cancelled.");
-                        root.refreshDiscreteGpu();
-                    }
-                }
 
             SettingsHeader {
                 icon: "bolt"
@@ -121,52 +65,81 @@ Item {
                 }
             }
 
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                text: UPower.onBattery ? qsTr("Power saver is active on battery. Your selected profile is restored when AC power returns.") : qsTr("This profile is used while connected to AC power. Power saver is selected automatically on battery.")
+                color: Colours.palette.m3onSurfaceVariant
+                font.pointSize: Tokens.font.size.small
+            }
+
             SectionHeader {
-                visible: root.discreteGpuAvailable
+                visible: PowerPrefs.gpuAvailable
                 Layout.topMargin: Tokens.spacing.large
                 title: qsTr("Discrete GPU")
-                description: qsTr("NVIDIA runtime power management")
+                description: qsTr("NVIDIA runtime power management · %1").arg(PowerPrefs.gpuRuntimeStatus || qsTr("checking"))
             }
 
             SectionContainer {
-                visible: root.discreteGpuAvailable
+                visible: PowerPrefs.gpuAvailable
                 contentSpacing: Tokens.spacing.normal
 
-                RowLayout {
+                Flow {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing.normal
+                    spacing: Tokens.spacing.small
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: Tokens.spacing.small / 2
-
-                        StyledText {
-                            Layout.fillWidth: true
-                            text: root.discreteGpuPowerSaving ? qsTr("Power down while idle") : qsTr("Keep GPU powered on")
-                            color: Colours.palette.m3onSurface
-                        }
-
-                        StyledText {
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            text: root.discreteGpuPowerSaving ? qsTr("The NVIDIA GPU sleeps when unused and wakes automatically when needed.") : qsTr("Keeps the NVIDIA GPU active, which can use more battery.")
-                            color: Colours.palette.m3onSurfaceVariant
-                            font.pointSize: Tokens.font.size.small
-                        }
+                    Pill {
+                        label: qsTr("Automatic")
+                        on: PowerPrefs.gpuMode === "automatic"
+                        onChose: PowerPrefs.setGpuMode("automatic")
                     }
-
-                    StyledSwitch {
-                        checked: root.discreteGpuPowerSaving
-                        enabled: root.discreteGpuAvailable && !root.discreteGpuChangePending
-                        onToggled: root.setDiscreteGpuPowerSaving(checked)
+                    Pill {
+                        label: qsTr("Power save")
+                        on: PowerPrefs.gpuMode === "power-save"
+                        onChose: PowerPrefs.setGpuMode("power-save")
+                    }
+                    Pill {
+                        label: qsTr("Keep on")
+                        on: PowerPrefs.gpuMode === "on"
+                        onChose: PowerPrefs.setGpuMode("on")
                     }
                 }
 
                 StyledText {
                     Layout.fillWidth: true
-                    visible: root.discreteGpuRuntimeStatus.length > 0 || root.discreteGpuError.length > 0
-                    text: root.discreteGpuError || (root.discreteGpuRuntimeStatus === "suspended" ? qsTr("GPU is currently powered down") : qsTr("GPU is currently active"))
-                    color: root.discreteGpuError ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+                    wrapMode: Text.Wrap
+                    text: PowerPrefs.gpuError || (PowerPrefs.gpuMode === "automatic" ? qsTr("Automatic enables runtime power saving on battery and restores the GPU on AC. Apps can wake the GPU when needed.") : PowerPrefs.gpuMode === "power-save" ? qsTr("Runtime power saving stays enabled; apps can wake the GPU when needed.") : qsTr("Keeps the NVIDIA GPU available and can use more battery."))
+                    color: PowerPrefs.gpuError ? Colours.palette.m3error : Colours.palette.m3onSurfaceVariant
+                    font.pointSize: Tokens.font.size.small
+                }
+            }
+
+            SectionHeader {
+                Layout.topMargin: Tokens.spacing.large
+                title: qsTr("Battery brightness")
+                description: qsTr("Lower the display brightness automatically on battery")
+            }
+
+            SectionContainer {
+                contentSpacing: Tokens.spacing.normal
+
+                SliderInput {
+                    Layout.fillWidth: true
+                    label: qsTr("Battery brightness target")
+                    value: PowerPrefs.batteryBrightnessTarget
+                    from: 20
+                    to: 60
+                    stepSize: 1
+                    suffix: "%"
+                    decimals: 0
+                    onValueModified: value => PowerPrefs.setBatteryBrightnessTarget(Math.round(value))
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
+                    text: qsTr("Brightness is reduced to this level on battery and restored when AC power returns. You can still adjust it manually while unplugged.")
+                    color: Colours.palette.m3onSurfaceVariant
                     font.pointSize: Tokens.font.size.small
                 }
             }

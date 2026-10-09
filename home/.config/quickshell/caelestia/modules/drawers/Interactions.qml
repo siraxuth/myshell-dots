@@ -22,6 +22,7 @@ CustomMouseArea {
 
     property point dragStart
     property bool dashboardShortcutActive
+    property bool dashboardHoverDismissed
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
 
@@ -85,7 +86,13 @@ CustomMouseArea {
     acceptedButtons: fullscreen ? Qt.NoButton : Qt.AllButtons
     hoverEnabled: true
 
-    onPressed: event => dragStart = Qt.point(event.x, event.y)
+    onPressed: event => {
+        dragStart = Qt.point(event.x, event.y);
+
+        // Dismiss the pinned dashboard when the user clicks outside its panel.
+        if (visibilities.dashboard && dashboardShortcutActive && !inDashboardArea(event.x, event.y))
+            visibilities.dashboard = false;
+    }
     onContainsMouseChanged: {
         if (!containsMouse) {
             // Only hide if not activated by shortcut
@@ -209,14 +216,14 @@ CustomMouseArea {
 
         // Show dashboard on hover (suppressed while the live-wallpaper picker owns the top
         // slot, and on monitors where the user disabled it — e.g. while drawing with a pen)
-        const showDashboard = Config.dashboard.showOnHover && !visibilities.liveWallpaper && DashboardPrefs.isEnabledFor(root.screen.name) && inDashboardArea(x, y);
+        if (dashboardHoverDismissed && !inDashboardArea(x, y))
+            dashboardHoverDismissed = false;
+
+        const showDashboard = Config.dashboard.showOnHover && !dashboardHoverDismissed && !visibilities.liveWallpaper && DashboardPrefs.isEnabledFor(root.screen.name) && inDashboardArea(x, y);
 
         // Always update visibility based on hover if not in shortcut mode
         if (!dashboardShortcutActive) {
             visibilities.dashboard = showDashboard;
-        } else if (showDashboard) {
-            // If hovering over dashboard area while in shortcut mode, transition to hover control
-            dashboardShortcutActive = false;
         }
 
         // Show/hide dashboard on drag (for touchscreen devices)
@@ -273,14 +280,13 @@ CustomMouseArea {
 
         function onDashboardChanged() {
             if (root.visibilities.dashboard) {
-                // Dashboard became visible, immediately check if this should be shortcut mode
-                const inDashboardArea = root.inDashboardArea(root.mouseX, root.mouseY);
-                if (!inDashboardArea) {
-                    root.dashboardShortcutActive = true;
-                }
+                // A dashboard revealed by moving to its edge should still dismiss
+                // when the pointer leaves. Only a shortcut reveal is pinned.
+                root.dashboardShortcutActive = !root.inDashboardArea(root.mouseX, root.mouseY);
             } else {
-                // Dashboard hidden, clear shortcut flag
                 root.dashboardShortcutActive = false;
+                // Avoid reopening immediately when dismissal happens at the edge trigger.
+                root.dashboardHoverDismissed = Config.dashboard.showOnHover && root.inDashboardArea(root.mouseX, root.mouseY);
             }
         }
 

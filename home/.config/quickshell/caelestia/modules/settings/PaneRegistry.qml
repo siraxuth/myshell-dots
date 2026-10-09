@@ -146,4 +146,13 @@ QtObject {
         }
         return null;
     }
+
+    function getIndexById(id: string): int {
+        for (let i = 0; i < panes.length; i++) {
+            if (panes[i].id === id) {
+                return i;
+            }
+        }
+        return -1;
+    }
 }

@@ -5,8 +5,7 @@ JsonObject {
     property bool wallpaperEnabled: true
     property DesktopClock desktopClock: DesktopClock {}
     property Visualiser visualiser: Visualiser {}
-    // NOTE: desktop widgets live in services/WidgetsPrefs.qml (~/.config/caelestia/widgets.json),
-    // not here — a JsonObject list<var> of objects doesn't round-trip reliably.
+    // Desktop widget layouts live per monitor under Paths.state/widgets.
 
     component DesktopClock: JsonObject {
         property bool enabled: false

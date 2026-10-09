@@ -171,6 +171,7 @@ Singleton {
         readonly property bool isAppleDisplay: root.appleDisplayPresent && modelData.model.startsWith("StudioDisplay")
         property real brightness
         property real queuedBrightness: NaN
+        property bool ready: false
 
         readonly property Process initProc: Process {
             stdout: StdioCollector {
@@ -182,6 +183,7 @@ Singleton {
                         const [, , , cur, max] = text.split(" ");
                         monitor.brightness = parseInt(cur) / parseInt(max);
                     }
+                    monitor.ready = true;
                 }
             }
         }

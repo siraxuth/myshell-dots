@@ -31,7 +31,8 @@ backup_and_place() {
 # ----------------------------------------------------------------------------
 if [ "$NO_PKG" = 0 ] && command -v pacman >/dev/null 2>&1; then
   say "Installing repo packages (pacman)"
-  grep -vE '^\s*#|^\s*$' "$DOTS/packages.txt" | sudo pacman -S --needed --noconfirm - || \
+  mapfile -t REPO_PACKAGES < <(sed -E 's/[[:space:]]+#.*$//' "$DOTS/packages.txt" | sed -E '/^[[:space:]]*(#|$)/d; s/^[[:space:]]+|[[:space:]]+$//g')
+  sudo pacman -S --needed --noconfirm "${REPO_PACKAGES[@]}" || \
     warn "Some pacman packages failed — continuing."
 
   AUR="$(command -v yay || command -v paru || true)"
@@ -122,6 +123,16 @@ fi
 # ----------------------------------------------------------------------------
 mkdir -p "$HOME/Videos/Wallpapers"
 say "Drop .mp4/.webm files in ~/Videos/Wallpapers for the Super+Shift+W picker."
+
+# ----------------------------------------------------------------------------
+# 6. Live wallpaper helper (thumbnail generation, metadata, and transcode cache)
+# ----------------------------------------------------------------------------
+if [ -f "$SRC/.local/bin/update-caelestia-live-thumbs" ]; then
+  mkdir -p "$HOME/.local/bin"
+  cp "$SRC/.local/bin/update-caelestia-live-thumbs" "$HOME/.local/bin/update-caelestia-live-thumbs"
+  chmod 755 "$HOME/.local/bin/update-caelestia-live-thumbs"
+  say "Installed live wallpaper helper"
+fi
 
 cat <<EOF
 

@@ -13,7 +13,6 @@ import "power"
 import "storage"
 import "widgets"
 import QtQuick
-import QtQuick.Layouts
 import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
@@ -51,13 +50,15 @@ ClippingRectangle {
         target: root.session
     }
 
-    ColumnLayout {
+    Item {
         id: layout
 
+        width: root.width
+        implicitHeight: root.height * PaneRegistry.count
+        height: implicitHeight
         property bool animationComplete: true
         property bool initialOpeningComplete: false
 
-        spacing: 0
         y: -root.session.activeIndex * root.height
         clip: true
 
@@ -86,6 +87,9 @@ ClippingRectangle {
             Pane {
                 required property int index
 
+                width: root.width
+                height: root.height
+                y: index * root.height
                 paneIndex: index
                 componentPath: PaneRegistry.getByIndex(index).component
             }

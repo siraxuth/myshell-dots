@@ -6,6 +6,18 @@ The shell is based on [Caelestia](https://github.com/caelestia-dots/shell) and [
 
 ## Install
 
+### One-command install
+
+On a fresh Arch Linux or CachyOS install, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/siraxuth/myshell-dots/main/bootstrap.sh | bash
+```
+
+This clones the repository into `~/.local/share/myshell-dots`, installs the listed Arch and AUR packages, backs up conflicting configuration paths, and applies the dotfiles. It asks before installing the optional Acer laptop utility. Review [bootstrap.sh](bootstrap.sh), [install.sh](install.sh), and [packages.txt](packages.txt) before running the one-command installer.
+
+### Manual install
+
 ```bash
 git clone https://github.com/siraxuth/myshell-dots.git
 cd myshell-dots
@@ -20,6 +32,8 @@ The installer can install packages and apply the included configuration. To skip
 
 Existing files are backed up before the installer replaces or links them. Review `install.sh` and `packages.txt` before using this on another machine. The package step targets Arch-based distributions; on other distributions, install equivalent dependencies yourself and apply the `home/` files manually.
 
+The installer also places the live-wallpaper thumbnail/transcode helper in `~/.local/bin/` and creates `~/Videos/Wallpapers/`. The config setup is safe to re-run; each replaced target gets a timestamped `.bak` backup.
+
 ## What’s included
 
 ### Caelestia shell
@@ -30,7 +44,8 @@ Existing files are backed up before the installer replaces or links them. Review
 - **24-hour time** used throughout the shell, including the bar, dashboard, lock screen, forecasts, and activity timestamps.
 - **Power controls** for battery-aware idle behavior and power profiles, plus a control for enabling or disabling the discrete GPU.
 - **Storage & Disk Usage** with mounted-drive capacity, common-folder size breakdowns, app inspection, selected-file cleanup, and cache clearing. Scans run on demand at low I/O priority; destructive actions ask for confirmation.
-- **Dashboard and desktop widgets** for media, weather, system information, and clock details.
+- **Desktop widget canvas** with per-monitor positioning, sizing, layers, backgrounds, and styling for clock, calendar, music, weather, images, system metrics, battery, GitHub contribution activity, and visualizer widgets.
+- **Music widget** with player selection, playback and shuffle controls, seek bar, audio spectrum, and album-art backgrounds.
 - **Live wallpaper picker** backed by `mpvpaper`, with wallpaper selection and preview controls.
 - **Launcher** with wallpaper browsing, color filtering, and configurable placement.
 - **Workspace and status indicators** adapted for horizontal and vertical taskbars.

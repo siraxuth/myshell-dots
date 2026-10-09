@@ -7,8 +7,13 @@
 hyprland
 quickshell            # provides `qs` (config tested on 0.3.0)
 xdg-desktop-portal-hyprland
+xdg-desktop-portal
+xdg-utils
+xdg-user-dirs
 uwsm                  # universal wayland session manager (caelestia launches via uwsm)
 app2unit
+git
+base-devel
 
 # --- Shell / terminal / prompt ---
 fish
@@ -29,12 +34,27 @@ playerctl             # MPRIS control + used by the `lyrics` terminal karaoke to
 toilet                # big block font for `lyrics` (Latin only; Thai falls back to large text)
 figlet                # alt big block font for `lyrics`
 wireplumber
+pipewire
+pipewire-audio
+pipewire-alsa
+pipewire-pulse
+upower
+power-profiles-daemon
+polkit
 networkmanager
 bluez
 bluez-utils
+libnotify
+wl-clipboard
+slurp
 
 # --- Live wallpaper (Super+Shift+W picker) ---
 ffmpeg                # generates first-frame thumbnails for the picker
+python                # helper scripts and storage scans
+lm_sensors            # CPU/GPU temperature readings
+power-profiles-daemon # power profile control from Settings
+polkit                # privileged GPU power actions
+xdg-utils             # open files and locations from Settings
 # mpvpaper -> see AUR section (renders the video wallpaper)
 
 # --- Applications (caelestia ships configs for these; install.sh symlinks them) ---

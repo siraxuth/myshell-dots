@@ -19,16 +19,69 @@ Item {
     implicitWidth: layout.implicitWidth + Tokens.padding.larger * 4
     implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
 
-    Flickable {
-        id: flick
-
+    ColumnLayout {
         anchors.fill: parent
-        contentHeight: layout.implicitHeight
-        contentWidth: width
-        flickableDirection: Flickable.VerticalFlick
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        interactive: contentHeight > height
+        spacing: Tokens.spacing.normal
+
+        StyledRect {
+            id: searchBackground
+
+            Layout.fillWidth: true
+            Layout.leftMargin: Tokens.padding.larger * 2
+            Layout.rightMargin: Tokens.padding.larger * 2
+            Layout.topMargin: Tokens.padding.large
+            implicitHeight: searchRow.implicitHeight + Tokens.padding.small * 2
+
+            radius: Tokens.rounding.normal
+            color: Colours.palette.m3surfaceContainerLowest
+            border.width: 1
+            border.color: searchField.activeFocus ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+
+            RowLayout {
+                id: searchRow
+
+                anchors.fill: parent
+                anchors.leftMargin: Tokens.padding.larger
+                anchors.rightMargin: Tokens.padding.small
+                spacing: Tokens.spacing.small
+
+                MaterialIcon {
+                    text: "search"
+                    color: Colours.palette.m3onSurfaceVariant
+                    font.pointSize: Tokens.font.size.normal
+                }
+
+                StyledTextField {
+                    id: searchField
+
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Search settings")
+                    font.pointSize: Tokens.font.size.normal
+                    selectByMouse: true
+                }
+
+                IconButton {
+                    visible: searchField.text.length > 0
+                    type: IconButton.Text
+                    icon: "close"
+                    font.pointSize: Tokens.font.size.normal
+                    Accessible.name: qsTr("Clear search")
+                    onClicked: searchField.clear()
+                }
+            }
+        }
+
+        Flickable {
+            id: flick
+
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentHeight: layout.implicitHeight + Tokens.padding.large * 2
+            contentWidth: width
+            flickableDirection: Flickable.VerticalFlick
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
 
         // Keep wheel events in the navigation rail so the adjacent pane cannot
         // interpret them as a page change or scroll gesture.
@@ -56,8 +109,8 @@ Item {
             anchors.leftMargin: Tokens.padding.larger * 2
             anchors.right: parent.right
             anchors.rightMargin: Tokens.padding.larger * 2
-            // centre when everything fits; top-align + scroll when it doesn't
-            y: Math.max(0, (flick.height - implicitHeight) / 2)
+            // Keep the list top-aligned while allowing only this column to scroll.
+            y: Tokens.padding.large
             spacing: Tokens.spacing.normal
 
         states: State {
@@ -82,29 +135,37 @@ Item {
                 id: category
 
                 required property var modelData
+                required property int index
+
+                readonly property var matchingPaneIds: modelData.paneIds.filter(id => {
+                    const pane = PaneRegistry.getById(id);
+                    const query = searchField.text.trim().toLocaleLowerCase();
+                    return !query || `${pane.label} ${pane.description}`.toLocaleLowerCase().includes(query);
+                })
 
                 Layout.fillWidth: true
-                implicitWidth: categoryLayout.implicitWidth
-                implicitHeight: categoryLayout.implicitHeight
+                Layout.topMargin: index > 0 ? Tokens.spacing.small : 0
+                visible: matchingPaneIds.length > 0
+                implicitWidth: categoryLayout.implicitWidth + Tokens.padding.small * 2
+                implicitHeight: categoryLayout.implicitHeight + Tokens.padding.small * 2
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: Tokens.rounding.large
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.alpha(Colours.palette.m3outline, 0.2)
+                }
 
                 ColumnLayout {
                     id: categoryLayout
 
                     anchors.fill: parent
+                    anchors.margins: Tokens.padding.small
                     spacing: 0
 
-                    Rectangle {
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: category.width * 0.5
-                        Layout.topMargin: category.modelData.name !== PaneRegistry.categories[0].name ? Tokens.spacing.small : 0
-                        Layout.bottomMargin: category.modelData.name !== PaneRegistry.categories[0].name ? Tokens.spacing.small : 0
-                        implicitHeight: 1
-                        color: Qt.alpha(Colours.palette.m3outline, 0.24)
-                        visible: category.modelData.name !== PaneRegistry.categories[0].name
-                    }
-
                     Repeater {
-                        model: category.modelData.paneIds
+                        model: category.matchingPaneIds
 
                         NavItem {
                             required property int index
@@ -113,13 +174,14 @@ Item {
                             Layout.fillWidth: true
                             pane: PaneRegistry.getById(modelData)
                             firstInGroup: index === 0
-                            lastInGroup: index === category.modelData.paneIds.length - 1
+                            lastInGroup: index === category.matchingPaneIds.length - 1
                         }
                     }
                 }
             }
         }
         }
+    }
     }
 
     component NavItem: Item {
@@ -130,23 +192,31 @@ Item {
         required property bool lastInGroup
         readonly property bool active: root.session.active === pane.label
 
-        implicitWidth: contentRow.implicitWidth + Tokens.padding.normal * 2
-        implicitHeight: contentRow.implicitHeight + Tokens.padding.small * 2
+        implicitWidth: contentRow.implicitWidth + Tokens.padding.large * 2
+        implicitHeight: contentRow.implicitHeight + Tokens.padding.large * 2
 
         StyledRect {
             id: background
 
             anchors.fill: parent
-            topLeftRadius: stateLayer.containsMouse ? Tokens.rounding.small : item.firstInGroup ? Tokens.rounding.small : 0
-            topRightRadius: stateLayer.containsMouse ? Tokens.rounding.small : item.firstInGroup ? Tokens.rounding.small : 0
-            bottomLeftRadius: stateLayer.containsMouse ? Tokens.rounding.small : item.lastInGroup ? Tokens.rounding.small : 0
-            bottomRightRadius: stateLayer.containsMouse ? Tokens.rounding.small : item.lastInGroup ? Tokens.rounding.small : 0
-            color: item.active ? Colours.palette.m3surfaceContainerLowest : Qt.alpha(Colours.palette.m3surfaceContainerHigh, 0.35)
-            border.width: stateLayer.containsMouse ? 1 : 0
-            border.color: Qt.alpha(Colours.palette.m3primary, 0.75)
+            topLeftRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.firstInGroup ? Tokens.rounding.large : 0
+            topRightRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.firstInGroup ? Tokens.rounding.large : 0
+            bottomLeftRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.lastInGroup ? Tokens.rounding.large : 0
+            bottomRightRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.lastInGroup ? Tokens.rounding.large : 0
+            color: item.active ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+
+            Behavior on topLeftRadius { Anim { type: Anim.StandardSmall } }
+            Behavior on topRightRadius { Anim { type: Anim.StandardSmall } }
+            Behavior on bottomLeftRadius { Anim { type: Anim.StandardSmall } }
+            Behavior on bottomRightRadius { Anim { type: Anim.StandardSmall } }
 
             StateLayer {
                 id: stateLayer
+
+                topLeftRadius: background.topLeftRadius
+                topRightRadius: background.topRightRadius
+                bottomLeftRadius: background.bottomLeftRadius
+                bottomRightRadius: background.bottomRightRadius
 
                 onClicked: {
                     // Prevent tab switching during initial opening animation to avoid blank pages
@@ -156,25 +226,37 @@ Item {
                     root.session.active = item.pane.label;
                 }
 
-                color: item.active ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
+                color: item.active ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
             }
 
             RowLayout {
                 id: contentRow
 
                 anchors.fill: parent
-                anchors.leftMargin: Tokens.padding.normal
-                anchors.rightMargin: Tokens.padding.normal
+                anchors.margins: Tokens.padding.large
                 spacing: Tokens.spacing.normal
 
-                MaterialIcon {
-                    text: item.pane.icon
-                    color: item.active ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.size.large
-                    fill: item.active ? 1 : 0
+                StyledRect {
+                    Layout.fillHeight: true
+                    Layout.topMargin: -1
+                    Layout.bottomMargin: -1
+                    implicitWidth: height
 
-                    Behavior on fill {
-                        Anim {}
+                    radius: Tokens.rounding.full
+                    color: item.active ? Colours.palette.m3primary : Colours.palette.m3secondaryContainer
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        anchors.verticalCenterOffset: 1
+
+                        text: item.pane.icon
+                        color: item.active ? Colours.palette.m3onPrimary : Colours.palette.m3onSecondaryContainer
+                        font.pointSize: Tokens.font.size.large
+                        fill: item.active ? 1 : 0
+
+                        Behavior on fill {
+                            Anim {}
+                        }
                     }
                 }
 
@@ -187,12 +269,13 @@ Item {
                         text: item.pane.label
                         color: item.active ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                         font.capitalization: Font.Capitalize
+                        font.pointSize: Tokens.font.size.normal
                     }
 
                     StyledText {
                         Layout.fillWidth: true
                         text: item.pane.description
-                        color: Qt.alpha(item.active ? Colours.palette.m3onSurface : Colours.palette.m3onSurfaceVariant, 0.62)
+                        color: Colours.palette.m3onSurfaceVariant
                         font.pointSize: Tokens.font.size.smaller
                         maximumLineCount: 1
                         elide: Text.ElideRight

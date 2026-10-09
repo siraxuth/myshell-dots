@@ -18,6 +18,8 @@ Item {
     readonly property int itemCount: entries.length
     property int selIndex: 0
     property bool navigated: false
+    property bool headerNavigation: false
+    property int headerIndex: 0
 
     readonly property real nonAnimHeight: layout.implicitHeight + Tokens.padding.larger * 2
 
@@ -53,6 +55,35 @@ Item {
         updateScroll();
     }
 
+    function focusHeader(): void {
+        headerIndex = Wallpapers.filterMode === 2 ? 0 : Wallpapers.filterMode === 0 ? 1 : 2;
+        headerNavigation = true;
+    }
+
+    function chooseFilter(mode: int): void {
+        headerNavigation = false;
+        navigated = false;
+        Wallpapers.filterMode = mode;
+    }
+
+    function activateHeaderItem(): void {
+        headerNavigation = false;
+        switch (headerIndex) {
+        case 0:
+            root.chooseFilter(2);
+            break;
+        case 1:
+            root.chooseFilter(0);
+            break;
+        case 2:
+            root.chooseFilter(1);
+            break;
+        case 3:
+            root.selectRandom();
+            break;
+        }
+    }
+
     function updateScroll(): void {
         const tileW = 200;
         const step = tileW + Tokens.spacing.normal;
@@ -75,6 +106,7 @@ Item {
         function onLiveWallpaperChanged(): void {
             if (!root.visibilities.liveWallpaper) return;
             root.navigated = false;
+            root.headerNavigation = false;
             root.syncToCurrent();
             Qt.callLater(() => {
                 root.updateScroll();
@@ -97,10 +129,25 @@ Item {
             Wallpapers.stopPreview();
             root.visibilities.liveWallpaper = false;
             event.accepted = true;
-        } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
+        } else if (root.headerNavigation && event.key === Qt.Key_Left) {
+            root.headerIndex = Math.max(0, root.headerIndex - 1);
+            event.accepted = true;
+        } else if (root.headerNavigation && event.key === Qt.Key_Right) {
+            root.headerIndex = Math.min(3, root.headerIndex + 1);
+            event.accepted = true;
+        } else if (root.headerNavigation && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space)) {
+            root.activateHeaderItem();
+            event.accepted = true;
+        } else if (root.headerNavigation && event.key === Qt.Key_Down) {
+            root.headerNavigation = false;
+            event.accepted = true;
+        } else if (!root.headerNavigation && event.key === Qt.Key_Up) {
+            root.focusHeader();
+            event.accepted = true;
+        } else if (!root.headerNavigation && event.key === Qt.Key_Left) {
             root.move(-1);
             event.accepted = true;
-        } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Down) {
+        } else if (!root.headerNavigation && (event.key === Qt.Key_Right || event.key === Qt.Key_Down)) {
             root.move(1);
             event.accepted = true;
         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -177,34 +224,46 @@ Item {
             }
 
             IconTextButton {
+                id: allFilterButton
                 icon: "collections"
                 text: qsTr("All")
                 toggle: true
                 checked: Wallpapers.filterMode === 2
-                onClicked: Wallpapers.filterMode = 2
+                border.width: root.headerNavigation && root.headerIndex === 0 ? 2 : 0
+                border.color: Colours.palette.m3primary
+                onClicked: root.chooseFilter(2)
             }
             IconTextButton {
+                id: staticFilterButton
                 icon: "image"
                 text: qsTr("Static")
                 toggle: true
                 checked: Wallpapers.filterMode === 0
-                onClicked: Wallpapers.filterMode = 0
+                border.width: root.headerNavigation && root.headerIndex === 1 ? 2 : 0
+                border.color: Colours.palette.m3primary
+                onClicked: root.chooseFilter(0)
             }
             IconTextButton {
+                id: liveFilterButton
                 icon: "smart_display"
                 text: qsTr("Live")
                 toggle: true
                 checked: Wallpapers.filterMode === 1
-                onClicked: Wallpapers.filterMode = 1
+                border.width: root.headerNavigation && root.headerIndex === 2 ? 2 : 0
+                border.color: Colours.palette.m3primary
+                onClicked: root.chooseFilter(1)
             }
             IconTextButton {
+                id: randomButton
                 icon: "shuffle"
                 text: qsTr("Random")
-                onClicked: root.selectRandom()
+                border.width: root.headerNavigation && root.headerIndex === 3 ? 2 : 0
+                border.color: Colours.palette.m3primary
+                onClicked: { root.headerNavigation = false; root.selectRandom(); }
             }
 
             StyledText {
-                text: qsTr("← → Tab Esc")
+                text: qsTr("↑ Menu  ← → Navigate  Enter Select")
                 color: Colours.palette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.small
             }
@@ -354,6 +413,7 @@ Item {
                         wallpaperPath: modelData.path
                         active: root.selIndex === index
                         onClicked: {
+                            root.headerNavigation = false;
                             root.selIndex = index;
                             const path = modelData.path;
                             if (Colours.scheme === "dynamic" && path !== Wallpapers.actualCurrent)

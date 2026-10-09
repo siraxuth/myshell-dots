@@ -25,8 +25,11 @@ LazyLoader {
         rejected();
     }
 
-    onAccepted: activeAsync = false
-    onRejected: activeAsync = false
+    // Let the pointer/key event finish before destroying the FloatingWindow and
+    // its delegates. Closing the LazyLoader synchronously from a file delegate's
+    // double-click handler can invalidate the active QQuickMouseArea event.
+    onAccepted: Qt.callLater(() => activeAsync = false)
+    onRejected: Qt.callLater(() => activeAsync = false)
 
     FloatingWindow {
         id: root

@@ -10,6 +10,7 @@ import "modules/background"
 import "modules/drawers"
 import "modules/emoji"
 import "modules/lock"
+import "modules/widgets"
 import qs.services
 
 ShellRoot {
@@ -18,6 +19,12 @@ ShellRoot {
     settings.watchFiles: false
 
     Background {
+    }
+
+    WidgetLayoutManager {
+    }
+
+    WidgetEditor {
     }
 
     Drawers {

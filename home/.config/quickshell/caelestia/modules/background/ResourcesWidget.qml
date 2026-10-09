@@ -15,7 +15,7 @@ StyledRect {
     implicitWidth: row.implicitWidth + Tokens.padding.large * 2
     implicitHeight: row.implicitHeight + Tokens.padding.large * 2
     radius: Tokens.rounding.large
-    color: bgVisible ? Qt.alpha(Colours.palette.m3surface, 0.55) : "transparent"
+    color: "transparent"
 
     Ref {
         service: SystemUsage
