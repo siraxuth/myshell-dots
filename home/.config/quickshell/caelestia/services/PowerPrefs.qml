@@ -21,6 +21,8 @@ Singleton {
     property int batScreenOff: 120
     property int batLock: 300
     property int batSuspend: 900
+    property string acLidAction: "suspend"
+    property string batLidAction: "hibernate"
     property string profile: "balanced"
 
     function buildTimeouts(so: int, lk: int, sp: int): var {
@@ -53,9 +55,23 @@ Singleton {
         persist();
     }
 
+    function setLidAction(key: string, action: string): void {
+        if (key !== "acLidAction" && key !== "batLidAction")
+            return;
+        if (action !== "suspend" && action !== "hibernate")
+            return;
+
+        root[key] = action;
+        persist();
+    }
+
+    function applyProfile(p: string): void {
+        Quickshell.execDetached(["busctl", "--system", "set-property", "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles", "net.hadess.PowerProfiles", "ActiveProfile", "s", p]);
+    }
+
     function setProfile(p: string): void {
         root.profile = p;
-        Quickshell.execDetached(["busctl", "--system", "set-property", "net.hadess.PowerProfiles", "/net/hadess/PowerProfiles", "net.hadess.PowerProfiles", "ActiveProfile", "s", p]);
+        applyProfile(p);
         persist();
     }
 
@@ -67,6 +83,8 @@ Singleton {
             batScreenOff: root.batScreenOff,
             batLock: root.batLock,
             batSuspend: root.batSuspend,
+            acLidAction: root.acLidAction,
+            batLidAction: root.batLidAction,
             profile: root.profile
         }, null, 2));
     }
@@ -92,9 +110,17 @@ Singleton {
                     root.batLock = d.batLock;
                 if (d.batSuspend !== undefined)
                     root.batSuspend = d.batSuspend;
+                if (d.acLidAction === "suspend" || d.acLidAction === "hibernate")
+                    root.acLidAction = d.acLidAction;
+                if (d.batLidAction === "suspend" || d.batLidAction === "hibernate")
+                    root.batLidAction = d.batLidAction;
                 if (d.profile)
                     root.profile = d.profile;
             } catch (e) {}
+            // ppd's live ActiveProfile is its own persisted state, independent of this file —
+            // it can drift (e.g. left on power-saver from a previous session) without us ever
+            // pushing our config back. Enforce it on every load so the stored pref is the truth.
+            root.applyProfile(root.profile);
         }
         onLoadFailed: err => {
             if (err === FileViewError.FileNotFound)

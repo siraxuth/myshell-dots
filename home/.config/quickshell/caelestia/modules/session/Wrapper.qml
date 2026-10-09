@@ -14,6 +14,7 @@ Item {
     readonly property bool shouldBeActive: visibilities.session && Config.session.enabled
     property real offsetScale: shouldBeActive ? 0 : 1
     property real sidebarOffset: sidebarVisible ? 14 : 0
+    readonly property real slideOffset: (-implicitWidth - 5 - sidebarOffset) * offsetScale
 
     visible: offsetScale < 1
     anchors.rightMargin: (-implicitWidth - 5 - sidebarOffset) * offsetScale

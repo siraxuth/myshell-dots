@@ -14,6 +14,7 @@ import qs.modules.sidebar as Sidebar
 import qs.modules.utilities as Utilities
 import qs.modules.bar.popouts as BarPopouts
 import qs.modules.utilities.toasts as Toasts
+import qs.utils
 
 Item {
     id: root
@@ -22,6 +23,9 @@ Item {
     required property DrawerVisibilities visibilities
     required property Bar.BarWrapper bar
     required property real borderThickness
+
+    readonly property bool barOnRight: BarPosition.isRight(bar.position)
+    readonly property bool barOnBottom: BarPosition.isBottom(bar.position)
 
     readonly property alias osd: osd
     readonly property alias osdWrapper: osdWrapper
@@ -39,14 +43,16 @@ Item {
 
     anchors.fill: parent
     anchors.margins: borderThickness
-    anchors.leftMargin: bar.implicitWidth
+    anchors.leftMargin: bar.reservedLeft
+    anchors.rightMargin: bar.reservedRight
+    anchors.topMargin: bar.reservedTop
+    anchors.bottomMargin: bar.reservedBottom
 
     Item {
         id: osdWrapper
 
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
-        anchors.rightMargin: sessionWrapper.anchors.rightMargin + session.width * (1 - session.offsetScale)
+        x: root.barOnRight ? sessionWrapper.width * (1 - session.offsetScale) : parent.width - width - sessionWrapper.width * (1 - session.offsetScale)
         clip: sidebar.visible || session.visible
 
         implicitWidth: osd.implicitWidth * (1 - osd.offsetScale)
@@ -60,7 +66,7 @@ Item {
             sidebarOrSessionVisible: sidebar.visible || session.visible
 
             anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
+            x: root.barOnRight ? slideOffset : parent.width - width - slideOffset
         }
     }
 
@@ -72,16 +78,16 @@ Item {
         osdPanel: osdWrapper
         sessionPanel: sessionWrapper
 
-        anchors.top: parent.top
-        anchors.right: parent.right
+        anchors.top: root.barOnBottom ? utilities.bottom : parent.top
+        anchors.topMargin: -5
+        x: root.barOnRight ? 0 : parent.width - width
     }
 
     Item {
         id: sessionWrapper
 
         anchors.verticalCenter: parent.verticalCenter
-        anchors.right: parent.right
-        anchors.rightMargin: sidebar.width * (1 - sidebar.offsetScale)
+        x: root.barOnRight ? sidebar.width * (1 - sidebar.offsetScale) : parent.width - width - sidebar.width * (1 - sidebar.offsetScale)
         clip: sidebar.visible
 
         implicitWidth: session.implicitWidth * (1 - session.offsetScale)
@@ -94,7 +100,7 @@ Item {
             sidebarVisible: sidebar.visible
 
             anchors.verticalCenter: parent.verticalCenter
-            anchors.right: parent.right
+            x: root.barOnRight ? slideOffset : parent.width - width - slideOffset
         }
     }
 
@@ -123,7 +129,7 @@ Item {
         }
 
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: LauncherPrefs.position === "center" ? -bar.implicitWidth / 2 : 0
+        anchors.horizontalCenterOffset: LauncherPrefs.position === "center" && BarPosition.isLeft(bar.position) ? -bar.implicitWidth / 2 : 0
 
         Component.onCompleted: applyVAnchor()
 
@@ -139,9 +145,7 @@ Item {
         id: dashboard
 
         visibilities: root.visibilities
-
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
+        onLeft: bar.isHorizontal
     }
 
     LiveWp.Wrapper {
@@ -158,6 +162,7 @@ Item {
 
         screen: root.screen
         borderThickness: root.borderThickness
+        position: bar.position
     }
 
     Utilities.Wrapper {
@@ -167,15 +172,16 @@ Item {
         sidebar: sidebar
         popouts: popoutsWrapper.content
 
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
+        y: root.barOnBottom ? slideOffset : parent.height - height - slideOffset
+        x: root.barOnRight ? 0 : parent.width - width
+        height: implicitHeight
     }
 
     Toasts.Toasts {
         id: toasts
 
-        anchors.bottom: sidebar.visible ? parent.bottom : utilities.top
-        anchors.right: sidebar.left
+        anchors.bottom: root.barOnBottom || sidebar.visible ? parent.bottom : utilities.top
+        x: root.barOnRight ? sidebar.x + sidebar.width + anchors.margins : sidebar.x - width - anchors.margins
         anchors.margins: Tokens.padding.normal
     }
 
@@ -185,7 +191,7 @@ Item {
         visibilities: root.visibilities
 
         anchors.top: notifications.bottom
-        anchors.bottom: utilities.top
-        anchors.right: parent.right
+        anchors.bottom: root.barOnBottom ? parent.bottom : utilities.top
+        x: root.barOnRight ? slideOffset : parent.width - width - slideOffset
     }
 }

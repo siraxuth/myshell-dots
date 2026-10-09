@@ -1,5 +1,5 @@
-import QtQuick
 import Caelestia.Config
+import QtQuick
 import qs.components
 import qs.services
 
@@ -19,37 +19,49 @@ StyledRect {
     property real verticalPadding: Tokens.padding.smaller
     property alias font: label.font
     property int type: TextButton.Filled
-
     property alias stateLayer: stateLayer
     property alias label: label
-
     property bool internalChecked
     property color activeColour: type === TextButton.Filled ? Colours.palette.m3primary : Colours.palette.m3secondary
     property color inactiveColour: {
         if (!toggle && type === TextButton.Filled)
             return Colours.palette.m3primary;
+
         return type === TextButton.Filled ? Colours.tPalette.m3surfaceContainer : Colours.palette.m3secondaryContainer;
     }
     property color activeOnColour: {
         if (type === TextButton.Text)
             return Colours.palette.m3primary;
+
         return type === TextButton.Filled ? Colours.palette.m3onPrimary : Colours.palette.m3onSecondary;
     }
     property color inactiveOnColour: {
         if (!toggle && type === TextButton.Filled)
             return Colours.palette.m3onPrimary;
+
         if (type === TextButton.Text)
             return Colours.palette.m3primary;
+
         return type === TextButton.Filled ? Colours.palette.m3onSurface : Colours.palette.m3onSecondaryContainer;
     }
 
-    signal clicked
+    signal clicked()
 
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Button
+    Accessible.name: text
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+            event.accepted = true;
+            if (toggle)
+                internalChecked = !internalChecked;
+
+            clicked();
+        }
+    }
     onCheckedChanged: internalChecked = checked
-
     radius: internalChecked ? Tokens.rounding.small : implicitHeight / 2 * Math.min(1, Tokens.rounding.scale)
     color: type === TextButton.Text ? "transparent" : internalChecked ? activeColour : inactiveColour
-
     implicitWidth: label.implicitWidth + horizontalPadding * 2
     implicitHeight: label.implicitHeight + verticalPadding * 2
 
@@ -60,6 +72,7 @@ StyledRect {
         onClicked: {
             if (root.toggle)
                 root.internalChecked = !root.internalChecked;
+
             root.clicked();
         }
     }
@@ -72,6 +85,9 @@ StyledRect {
     }
 
     Behavior on radius {
-        Anim {}
+        Anim {
+        }
+
     }
+
 }

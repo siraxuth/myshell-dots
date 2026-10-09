@@ -155,7 +155,7 @@ Singleton {
     }
 
     Timer {
-        interval: GlobalConfig.dashboard.resourceUpdateInterval
+        interval: Math.max(5000, GlobalConfig.dashboard.resourceUpdateInterval)
         running: root.refCount > 0
         repeat: true
         triggeredOnStart: true

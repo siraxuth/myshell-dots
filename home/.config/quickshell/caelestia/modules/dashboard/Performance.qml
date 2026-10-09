@@ -7,6 +7,7 @@ import Caelestia.Internal
 import qs.components
 import qs.components.misc
 import qs.services
+import qs.utils
 
 Item {
     id: root
@@ -200,19 +201,8 @@ Item {
 
                             return "balance";
                         }
-                        if (UPower.displayDevice.state === UPowerDeviceState.FullyCharged)
-                            return "battery_full";
-
-                        const perc = UPower.displayDevice.percentage;
                         const charging = [UPowerDeviceState.Charging, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state);
-                        if (perc >= 0.99)
-                            return "battery_full";
-
-                        let level = Math.floor(perc * 7);
-                        if (charging && (level === 4 || level === 1))
-                            level--;
-
-                        return charging ? `battery_charging_${(level + 3) * 10}` : `battery_${level}_bar`;
+                        return Icons.getBatteryIcon(Math.round(UPower.displayDevice.percentage * 100), charging);
                     }
                     font.pointSize: Tokens.font.size.large
                     color: batteryTank.accentColor

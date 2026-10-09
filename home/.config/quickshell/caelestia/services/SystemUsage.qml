@@ -52,6 +52,68 @@ Singleton {
         return name.replace(/\(R\)|\(TM\)|Graphics/gi, "").replace(/\s+/g, " ").trim();
     }
 
+    function temperaturesFromSensorBlock(block: string): var {
+        const temperatures = [];
+
+        for (const line of block.split("\n")) {
+            const match = line.match(/^[^:]+:\s+\+?(-?[0-9]+(?:\.[0-9]+)?)(?:°| )C/);
+            if (!match)
+                continue;
+
+            const temperature = parseFloat(match[1]);
+            // Discard disconnected/broken sensors without hiding legitimate laptop temperatures.
+            if (Number.isFinite(temperature) && temperature >= 0 && temperature <= 125)
+                temperatures.push(temperature);
+        }
+
+        return temperatures;
+    }
+
+    function average(values: var): real {
+        if (values.length === 0)
+            return 0;
+
+        return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function cpuTemperatureFromSensors(output: string): real {
+        const blocks = output.trim().split(/\n\s*\n/);
+
+        // DAMX averages all readings exposed by the CPU hwmon device instead of
+        // showing only the hottest package/control reading.
+        for (const block of blocks) {
+            const chip = block.split("\n", 1)[0].toLowerCase();
+            if (!/(^|[-_])(coretemp|k10temp|zenpower|cpu_thermal|x86_pkg_temp)([-_]|$)/.test(chip))
+                continue;
+
+            const temperatures = root.temperaturesFromSensorBlock(block);
+            if (temperatures.length > 0)
+                return root.average(temperatures);
+        }
+
+        // Keep the former behaviour as a fallback for uncommon sensor drivers.
+        const fallback = output.match(/(?:Package id [0-9]+|Tdie|Tctl):\s+\+?(-?[0-9]+(?:\.[0-9]+)?)(?:°| )C/);
+        return fallback ? parseFloat(fallback[1]) : 0;
+    }
+
+    function gpuTemperatureFromSensors(output: string): real {
+        const blocks = output.trim().split(/\n\s*\n/);
+
+        for (const block of blocks) {
+            const chip = block.split("\n", 1)[0].toLowerCase();
+            // Only accept a DRM GPU sensor. The previous PCI-wide parser could
+            // accidentally report a Wi-Fi or NVMe temperature as the GPU value.
+            if (!/(^|[-_])(amdgpu|radeon|nouveau|i915|xe)([-_]|$)/.test(chip))
+                continue;
+
+            const temperatures = root.temperaturesFromSensorBlock(block);
+            if (temperatures.length > 0)
+                return root.average(temperatures);
+        }
+
+        return 0;
+    }
+
     function formatKib(kib: real): var {
         const mib = 1024;
         const gib = 1024 ** 2;
@@ -80,14 +142,26 @@ Singleton {
 
     Timer {
         running: root.refCount > 0
-        interval: GlobalConfig.dashboard.resourceUpdateInterval
+        interval: Math.max(5000, GlobalConfig.dashboard.resourceUpdateInterval)
         repeat: true
         triggeredOnStart: true
         onTriggered: {
             stat.reload();
             meminfo.reload();
+            if (root.gpuType === "GENERIC" || root.gpuType === "NVIDIA")
+                gpuUsage.running = true;
+        }
+    }
+
+    // Sensors and lsblk spawn external processes and change slowly; sample them
+    // less often than CPU, memory and GPU counters.
+    Timer {
+        running: root.refCount > 0
+        interval: 30000
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: {
             storage.running = true;
-            gpuUsage.running = true;
             sensors.running = true;
         }
     }
@@ -265,13 +339,14 @@ Singleton {
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.gpuType === "GENERIC") {
-                    const percs = text.trim().split("\n");
-                    const sum = percs.reduce((acc, d) => acc + parseInt(d, 10), 0);
-                    root.gpuPerc = sum / percs.length / 100;
+                    const percs = text.trim().split("\n").map(value => parseInt(value, 10)).filter(value => Number.isFinite(value));
+                    root.gpuPerc = percs.length > 0 ? Math.min(1, Math.max(0, root.average(percs) / 100)) : 0;
                 } else if (root.gpuType === "NVIDIA") {
                     const [usage, temp] = text.trim().split(",");
-                    root.gpuPerc = parseInt(usage, 10) / 100;
-                    root.gpuTemp = parseInt(temp, 10);
+                    const usageValue = parseInt(usage, 10);
+                    const temperatureValue = parseInt(temp, 10);
+                    root.gpuPerc = Number.isFinite(usageValue) ? Math.min(1, Math.max(0, usageValue / 100)) : 0;
+                    root.gpuTemp = Number.isFinite(temperatureValue) ? temperatureValue : 0;
                 } else {
                     root.gpuPerc = 0;
                     root.gpuTemp = 0;
@@ -290,40 +365,12 @@ Singleton {
             })
         stdout: StdioCollector {
             onStreamFinished: {
-                let cpuTemp = text.match(/(?:Package id [0-9]+|Tdie):\s+((\+|-)[0-9.]+)(°| )C/);
-                if (!cpuTemp)
-                    // If AMD Tdie pattern failed, try fallback on Tctl
-                    cpuTemp = text.match(/Tctl:\s+((\+|-)[0-9.]+)(°| )C/);
-
-                if (cpuTemp)
-                    root.cpuTemp = parseFloat(cpuTemp[1]);
+                root.cpuTemp = root.cpuTemperatureFromSensors(text);
 
                 if (root.gpuType !== "GENERIC")
                     return;
 
-                let eligible = false;
-                let sum = 0;
-                let count = 0;
-
-                for (const line of text.trim().split("\n")) {
-                    if (line === "Adapter: PCI adapter")
-                        eligible = true;
-                    else if (line === "")
-                        eligible = false;
-                    else if (eligible) {
-                        let match = line.match(/^(temp[0-9]+|GPU core|edge)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-                        if (!match)
-                            // Fall back to junction/mem if GPU doesn't have edge temp (for AMD GPUs)
-                            match = line.match(/^(junction|mem)+:\s+\+([0-9]+\.[0-9]+)(°| )C/);
-
-                        if (match) {
-                            sum += parseFloat(match[2]);
-                            count++;
-                        }
-                    }
-                }
-
-                root.gpuTemp = count > 0 ? sum / count : 0;
+                root.gpuTemp = root.gpuTemperatureFromSensors(text);
             }
         }
     }

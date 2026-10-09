@@ -24,7 +24,7 @@ StyledRect {
 
         StyledText {
             Layout.alignment: Qt.AlignHCenter
-            text: Time.format(GlobalConfig.services.useTwelveHourClock ? "h:mm" : "HH:mm")
+            text: Time.format("HH:mm")
             font.pointSize: Tokens.font.size.extraLarge * 2.4
             font.bold: true
             color: Colours.palette.m3onSurface

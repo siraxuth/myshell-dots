@@ -126,6 +126,13 @@ Item {
             sourceComponent: LockStatus {}
         }
 
+        Popout {
+            name: "clock"
+            sourceComponent: Calendar {
+                popouts: root.popouts
+            }
+        }
+
         Repeater {
             model: ScriptModel {
                 values: SystemTray.items.values.filter(i => !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))

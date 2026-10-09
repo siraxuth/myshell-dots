@@ -12,6 +12,7 @@ import qs.components
 import qs.components.containers
 import qs.services
 import qs.modules.bar
+import qs.utils
 
 StyledWindow {
     id: root
@@ -80,14 +81,14 @@ StyledWindow {
     Region {
         id: emptyRegion
 
-        x: panels.notifications.x + bar.implicitWidth
-        y: panels.notifications.y + root.borderThickness
+        x: panels.notifications.x + bar.reservedLeft
+        y: panels.notifications.y + bar.reservedTop
         width: panels.notifications.width
         height: panels.notifications.height
 
         Region {
             x: root.width - width
-            y: panels.osdWrapper.y + root.borderThickness
+            y: panels.osdWrapper.y + bar.reservedTop
             width: panels.osdWrapper.width * (1 - panels.osd.offsetScale) + root.borderThickness
             height: panels.osd.height
         }
@@ -153,10 +154,10 @@ StyledWindow {
             anchors.margins: -50 // Make border thicker to smooth out bulge from closed drawers
             group: blobGroup
             radius: root.borderRounding
-            borderLeft: bar.implicitWidth - anchors.margins - root.sdfBorderOffset
-            borderRight: root.borderThickness - anchors.margins - root.sdfBorderOffset
-            borderTop: root.borderThickness - anchors.margins - root.sdfBorderOffset
-            borderBottom: root.borderThickness - anchors.margins - root.sdfBorderOffset
+            borderLeft: bar.reservedLeft - anchors.margins - root.sdfBorderOffset
+            borderRight: bar.reservedRight - anchors.margins - root.sdfBorderOffset
+            borderTop: bar.reservedTop - anchors.margins - root.sdfBorderOffset
+            borderBottom: bar.reservedBottom - anchors.margins - root.sdfBorderOffset
         }
 
         PanelBg {
@@ -185,7 +186,7 @@ StyledWindow {
 
             panel: panels.sessionWrapper
             deformAmount: 0.2
-            x: panels.sessionWrapper.x + panels.session.x + bar.implicitWidth
+            x: panels.sessionWrapper.x + panels.session.x + bar.reservedLeft
             implicitWidth: panels.session.width
         }
 
@@ -204,7 +205,7 @@ StyledWindow {
 
             panel: panels.osdWrapper
             deformAmount: 0.25
-            x: panels.osdWrapper.x + panels.osd.x + bar.implicitWidth
+            x: panels.osdWrapper.x + panels.osd.x + bar.reservedLeft
             implicitWidth: panels.osd.width
         }
 
@@ -231,7 +232,7 @@ StyledWindow {
 
             panel: panels.popoutsWrapper
             deformAmount: panels.popouts.isDetached ? 0.05 : panels.popouts.hasCurrent ? 0.15 : 0.1
-            x: panels.popoutsWrapper.x + panels.popouts.x + bar.implicitWidth - panels.popouts.width * extraWidth
+            x: panels.popoutsWrapper.x + panels.popouts.x + bar.reservedLeft - panels.popouts.width * extraWidth
             implicitWidth: panels.popouts.width * (1 + extraWidth)
 
             Behavior on extraWidth {
@@ -266,6 +267,8 @@ StyledWindow {
             visibilities: visibilities
             bar: bar
             borderThickness: root.borderThickness
+
+            Component.onCompleted: Visibilities.registerPopouts(root.screen, panels.popoutsWrapper.content)
 
             utilities.horizontalStretch: (sidebarBg.rawDeformMatrix.m11 - 1) / 2 + 1
             utilities.deformMatrix: utilsBg.rawDeformMatrix
@@ -302,8 +305,10 @@ StyledWindow {
         BarWrapper {
             id: bar
 
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
+            x: 0
+            y: bar.isHorizontal && BarPosition.isBottom(bar.position) ? parent.height - height : 0
+            width: bar.isHorizontal ? parent.width : bar.contentThickness
+            height: bar.isHorizontal ? bar.extent : parent.height
 
             screen: root.screen
             visibilities: visibilities
@@ -320,8 +325,8 @@ StyledWindow {
         property real deformAmount: 0.15
 
         group: blobGroup
-        x: panel.x + bar.implicitWidth
-        y: panel.y + root.borderThickness
+        x: panel.x + bar.reservedLeft
+        y: panel.y + bar.reservedTop
         implicitWidth: panel.width
         implicitHeight: panel.height
         radius: Tokens.rounding.large

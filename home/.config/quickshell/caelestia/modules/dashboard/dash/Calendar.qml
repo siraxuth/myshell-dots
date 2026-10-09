@@ -16,6 +16,8 @@ CustomMouseArea {
 
     readonly property int currMonth: dashState.currentDate.getMonth()
     readonly property int currYear: dashState.currentDate.getFullYear()
+    readonly property string selectedDateKey: Events.formatDateKey(dashState.currentDate)
+    readonly property var selectedEvents: Events.getEvents(selectedDateKey)
 
     function onWheel(event: WheelEvent): void {
         if (event.angleDelta.y > 0)
@@ -139,7 +141,7 @@ CustomMouseArea {
                 horizontalAlignment: Text.AlignHCenter
                 text: model.shortName
                 font.weight: 500
-                color: (model.day === 0 || model.day === 6) ? Colours.palette.m3secondary : Colours.palette.m3onSurfaceVariant
+                color: (model.day === 0 || model.day === 6 || model.day === 7) ? Colours.palette.m3secondary : Colours.palette.m3onSurfaceVariant
             }
         }
 
@@ -162,14 +164,30 @@ CustomMouseArea {
                     id: dayItem
 
                     required property var model
+                    readonly property bool hasEvents: Events.hasEvents(Events.formatDateKey(dayItem.model.date))
+                    readonly property bool selected: Events.formatDateKey(dayItem.model.date) === root.selectedDateKey
 
                     implicitWidth: implicitHeight
-                    implicitHeight: text.implicitHeight + Tokens.padding.small * 2
+                    implicitHeight: text.implicitHeight + Tokens.padding.small * 2 + 6
+
+                    StyledRect {
+                        anchors.fill: parent
+                        radius: Tokens.rounding.full
+                        color: Colours.palette.m3primary
+                        opacity: dayItem.selected && !dayItem.model.today ? 0.2 : 0
+                    }
+
+                    StateLayer {
+                        anchors.fill: parent
+                        radius: Tokens.rounding.full
+                        onClicked: root.dashState.currentDate = dayItem.model.date
+                    }
 
                     StyledText {
                         id: text
 
                         anchors.centerIn: parent
+                        anchors.verticalCenterOffset: dayItem.hasEvents ? -2 : 0
 
                         horizontalAlignment: Text.AlignHCenter
                         text: grid.locale.toString(dayItem.model.day)
@@ -183,6 +201,18 @@ CustomMouseArea {
                         opacity: dayItem.model.today || dayItem.model.month === grid.month ? 1 : 0.4
                         font.pointSize: Tokens.font.size.normal
                         font.weight: 500
+                    }
+
+                    StyledRect {
+                        visible: dayItem.hasEvents
+                        anchors.top: text.bottom
+                        anchors.topMargin: 1
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 4
+                        height: 4
+                        radius: Tokens.rounding.full
+                        color: dayItem.model.today ? Colours.palette.m3onPrimary : Colours.palette.m3primary
+                        opacity: dayItem.model.month === grid.month ? 1 : 0.4
                     }
                 }
             }
@@ -240,6 +270,66 @@ CustomMouseArea {
                 Behavior on y {
                     Anim {
                         type: Anim.DefaultSpatial
+                    }
+                }
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.small
+            visible: root.selectedEvents.length > 0
+
+            StyledText {
+                Layout.fillWidth: true
+                text: Qt.formatDate(root.dashState.currentDate, "dddd, d MMMM")
+                color: Colours.palette.m3primary
+                font.pointSize: Tokens.font.size.small
+                font.weight: 600
+                font.capitalization: Font.Capitalize
+            }
+
+            Repeater {
+                model: root.selectedEvents
+
+                delegate: RowLayout {
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    StyledRect {
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: Tokens.padding.smaller
+                        implicitWidth: 3
+                        implicitHeight: title.implicitHeight + (description.visible ? description.implicitHeight + 2 : 0)
+                        radius: Tokens.rounding.full
+                        color: Colours.palette.m3primary
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        StyledText {
+                            id: title
+                            Layout.fillWidth: true
+                            text: [modelData.time, modelData.title].filter(value => value && String(value).trim()).join(" · ")
+                            color: Colours.palette.m3onSurface
+                            font.pointSize: Tokens.font.size.small
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            id: description
+                            Layout.fillWidth: true
+                            visible: Boolean(modelData.description)
+                            text: modelData.description ?? ""
+                            color: Colours.palette.m3onSurfaceVariant
+                            font.pointSize: Tokens.font.size.smaller
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                        }
                     }
                 }
             }

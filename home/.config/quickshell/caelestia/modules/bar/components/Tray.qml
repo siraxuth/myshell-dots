@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.SystemTray
 import Caelestia.Config
@@ -13,6 +14,7 @@ StyledRect {
     readonly property alias layout: layout
     readonly property alias items: items
     readonly property alias expandIcon: expandIcon
+    required property bool isHorizontal
 
     readonly property int padding: Config.bar.tray.background ? Tokens.padding.normal : Tokens.padding.small
     readonly property int spacing: Config.bar.tray.background ? Tokens.spacing.small : 0
@@ -24,45 +26,27 @@ StyledRect {
             return layout.implicitHeight + padding * 2;
         return (expanded ? expandIcon.implicitHeight + layout.implicitHeight + spacing : expandIcon.implicitHeight) + padding * 2;
     }
+    readonly property real nonAnimWidth: isHorizontal ? layout.implicitWidth + padding * 2 : Tokens.sizes.bar.innerWidth
 
     clip: true
     visible: height > 0
 
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: nonAnimHeight
+    implicitWidth: isHorizontal ? nonAnimWidth : Tokens.sizes.bar.innerWidth
+    implicitHeight: isHorizontal ? Tokens.sizes.bar.innerWidth : nonAnimHeight
 
     color: Qt.alpha(Colours.tPalette.m3surfaceContainer, (Config.bar.tray.background && items.count > 0) ? Colours.tPalette.m3surfaceContainer.a : 0)
     radius: Tokens.rounding.full
 
-    Column {
+    GridLayout {
         id: layout
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: root.padding
-        spacing: Tokens.spacing.small
+        anchors.centerIn: parent
+        columns: root.isHorizontal ? -1 : 1
+        rows: root.isHorizontal ? 1 : -1
+        columnSpacing: Tokens.spacing.small
+        rowSpacing: Tokens.spacing.small
 
         opacity: root.expanded || !Config.bar.tray.compact ? 1 : 0
-
-        add: Transition {
-            Anim {
-                properties: "scale"
-                from: 0
-                to: 1
-                easing: Tokens.anim.standardDecel
-            }
-        }
-
-        move: Transition {
-            Anim {
-                properties: "scale"
-                to: 1
-                easing: Tokens.anim.standardDecel
-            }
-            Anim {
-                properties: "x,y"
-            }
-        }
 
         Repeater {
             id: items
@@ -84,8 +68,10 @@ StyledRect {
 
         asynchronous: true
 
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
+        anchors.horizontalCenter: root.isHorizontal ? undefined : parent.horizontalCenter
+        anchors.verticalCenter: root.isHorizontal ? parent.verticalCenter : undefined
+        anchors.bottom: root.isHorizontal ? undefined : parent.bottom
+        anchors.right: root.isHorizontal ? parent.right : undefined
 
         active: Config.bar.tray.compact && items.count > 0
 
@@ -96,8 +82,10 @@ StyledRect {
             MaterialIcon {
                 id: expandIconInner
 
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: root.isHorizontal ? undefined : parent.horizontalCenter
+                anchors.verticalCenter: root.isHorizontal ? parent.verticalCenter : undefined
+                anchors.bottom: root.isHorizontal ? undefined : parent.bottom
+                anchors.right: root.isHorizontal ? parent.right : undefined
                 anchors.bottomMargin: Config.bar.tray.background ? Tokens.padding.small : -Tokens.padding.small
                 text: "expand_less"
                 font.pointSize: Tokens.font.size.large

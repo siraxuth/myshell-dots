@@ -22,8 +22,8 @@ Item {
     // General Settings
     property bool enabled: Config.dashboard.enabled ?? true
     property bool showOnHover: Config.dashboard.showOnHover ?? true
-    property int mediaUpdateInterval: GlobalConfig.dashboard.mediaUpdateInterval ?? 1000
-    property int resourceUpdateInterval: GlobalConfig.dashboard.resourceUpdateInterval ?? 1000
+    property int mediaUpdateInterval: Math.max(1000, GlobalConfig.dashboard.mediaUpdateInterval ?? 1000)
+    property int resourceUpdateInterval: Math.max(5000, GlobalConfig.dashboard.resourceUpdateInterval ?? 10000)
     property int dragThreshold: Config.dashboard.dragThreshold ?? 50
 
     // Dashboard Tabs
@@ -61,35 +61,15 @@ Item {
 
     anchors.fill: parent
 
-    ClippingRectangle {
-        id: dashboardClippingRect
-
+    PaneFrame {
         anchors.fill: parent
-        anchors.margins: Tokens.padding.normal
-        anchors.leftMargin: 0
-        anchors.rightMargin: Tokens.padding.normal
-
-        radius: dashboardBorder.innerRadius
-        color: "transparent"
-
         Loader {
             id: dashboardLoader
 
             anchors.fill: parent
-            anchors.margins: Tokens.padding.large + Tokens.padding.normal
-            anchors.leftMargin: Tokens.padding.large
-            anchors.rightMargin: Tokens.padding.large
-
             asynchronous: true
             sourceComponent: dashboardContentComponent
         }
-    }
-
-    InnerBorder {
-        id: dashboardBorder
-
-        leftThickness: 0
-        rightThickness: Tokens.padding.normal
     }
 
     Component {

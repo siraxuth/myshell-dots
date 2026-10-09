@@ -10,6 +10,7 @@ import "launcher"
 import "dashboard"
 import "display"
 import "power"
+import "storage"
 import "widgets"
 import QtQuick
 import QtQuick.Layouts
@@ -17,7 +18,7 @@ import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
 import qs.services
-import qs.modules.controlcenter
+import qs.modules.settings
 
 ClippingRectangle {
     id: root
@@ -26,7 +27,9 @@ ClippingRectangle {
 
     readonly property bool initialOpeningComplete: layout.initialOpeningComplete
 
-    color: "transparent"
+    // Keep the right-side content on its original surface while the outer
+    // window and inner border use the container surface color.
+    color: Colours.tPalette.m3surface
     clip: true
     focus: false
     activeFocusOnTab: false
@@ -108,6 +111,7 @@ ClippingRectangle {
         required property int paneIndex
         required property string componentPath
         property bool hasBeenLoaded: false
+        readonly property string paneId: PaneRegistry.getByIndex(pane.paneIndex).id
 
         function updateActive(): void {
             const diff = Math.abs(root.session.activeIndex - pane.paneIndex);

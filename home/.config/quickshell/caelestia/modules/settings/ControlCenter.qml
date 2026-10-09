@@ -7,14 +7,14 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
+import "sidebar"
 
 Item {
     id: root
 
     required property ShellScreen screen
-    readonly property int rounding: floating ? 0 : Tokens.rounding.large
+    readonly property int rounding: Tokens.rounding.large
 
-    property alias floating: session.floating
     property alias active: session.active
     property alias navExpanded: session.navExpanded
 
@@ -27,7 +27,7 @@ Item {
 
     signal close
 
-    implicitWidth: implicitHeight * Tokens.sizes.controlCenter.ratio
+    implicitWidth: implicitHeight * Tokens.sizes.controlCenter.ratio + 250
     implicitHeight: screen.height * Tokens.sizes.controlCenter.heightMult
 
     GridLayout {
@@ -35,46 +35,18 @@ Item {
 
         rowSpacing: 0
         columnSpacing: 0
-        rows: root.floating ? 2 : 1
+        rows: 1
         columns: 2
 
-        Loader {
-            Layout.fillWidth: true
-            Layout.columnSpan: 2
-
-            asynchronous: true
-            active: root.floating
-            visible: active
-
-            sourceComponent: WindowTitle {
-                screen: root.screen
-                session: root.session
-            }
-        }
-
         StyledRect {
+            Layout.preferredWidth: root.width * 0.2
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
 
             topLeftRadius: root.rounding
             bottomLeftRadius: root.rounding
             implicitWidth: navRail.implicitWidth
             color: Colours.tPalette.m3surfaceContainer
-
-            CustomMouseArea {
-                function onWheel(event: WheelEvent): void {
-                    // Prevent tab switching during initial opening animation to avoid blank pages
-                    if (!panes.initialOpeningComplete) {
-                        return;
-                    }
-
-                    if (event.angleDelta.y < 0)
-                        root.session.activeIndex = Math.min(root.session.activeIndex + 1, root.session.panes.length - 1);
-                    else if (event.angleDelta.y > 0)
-                        root.session.activeIndex = Math.max(root.session.activeIndex - 1, 0);
-                }
-
-                anchors.fill: parent
-            }
 
             NavRail {
                 id: navRail
@@ -90,6 +62,7 @@ Item {
         Panes {
             id: panes
 
+            Layout.preferredWidth: root.width * 0.8
             Layout.fillWidth: true
             Layout.fillHeight: true
 

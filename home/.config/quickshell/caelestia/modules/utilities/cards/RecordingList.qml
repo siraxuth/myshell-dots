@@ -92,7 +92,9 @@ ColumnLayout {
                         return time;
                     const date = new Date(...matches.slice(1));
                     date.setMonth(date.getMonth() - 1); // Woe (months start from 0)
-                    return qsTr("Recording at %1").arg(Qt.formatDateTime(date, Qt.locale()));
+                    const localDate = Qt.formatDate(date, Qt.locale());
+                    const localTime = Qt.formatTime(date, "HH:mm");
+                    return qsTr("Recording at %1").arg(`${localDate} ${localTime}`);
                 }
                 color: Colours.palette.m3onSurfaceVariant
                 elide: Text.ElideRight

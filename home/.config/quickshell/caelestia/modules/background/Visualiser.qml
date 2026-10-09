@@ -60,7 +60,9 @@ Item {
 
                     anchors.fill: parent
                     anchors.margins: Config.border.thickness
-                    anchors.leftMargin: Visibilities.bars.get(root.screen).exclusiveZone + Tokens.spacing.small * Config.background.visualiser.spacing
+                    anchors.leftMargin: (Visibilities.bars.get(root.screen)?.position === "left" ? Visibilities.bars.get(root.screen).exclusiveZone : Config.border.thickness) + Tokens.spacing.small * Config.background.visualiser.spacing
+                    anchors.topMargin: (Visibilities.bars.get(root.screen)?.position === "top" ? Visibilities.bars.get(root.screen).exclusiveZone : Config.border.thickness) + Tokens.spacing.small * Config.background.visualiser.spacing
+                    anchors.bottomMargin: (Visibilities.bars.get(root.screen)?.position === "bottom" ? Visibilities.bars.get(root.screen).exclusiveZone : Config.border.thickness) + Tokens.spacing.small * Config.background.visualiser.spacing
 
                     values: Audio.cava.values
                     primaryColor: Qt.alpha(Colours.palette.m3primary, 0.7)

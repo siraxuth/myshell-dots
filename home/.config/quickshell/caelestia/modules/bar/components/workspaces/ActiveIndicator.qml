@@ -13,6 +13,7 @@ StyledRect {
     required property Repeater workspaces
     required property Item mask
     required property bool fullscreen
+    required property bool isHorizontal
 
     readonly property int currentWsIdx: {
         let i = activeWsId - 1;
@@ -21,15 +22,15 @@ StyledRect {
         return i % Config.bar.workspaces.shown;
     }
 
-    property real leading: workspaces.count > 0 ? workspaces.itemAt(currentWsIdx)?.y ?? 0 : 0
-    property real trailing: workspaces.count > 0 ? workspaces.itemAt(currentWsIdx)?.y ?? 0 : 0
+    property real leading: workspaces.count > 0 ? (isHorizontal ? workspaces.itemAt(currentWsIdx)?.x : workspaces.itemAt(currentWsIdx)?.y) ?? 0 : 0
+    property real trailing: workspaces.count > 0 ? (isHorizontal ? workspaces.itemAt(currentWsIdx)?.x : workspaces.itemAt(currentWsIdx)?.y) ?? 0 : 0
     property real currentSize: workspaces.count > 0 ? (workspaces.itemAt(currentWsIdx) as Workspace)?.size ?? 0 : 0
     property real offset: Math.min(leading, trailing)
     property real size: {
         const s = Math.abs(leading - trailing) + currentSize;
         if (Config.bar.workspaces.activeTrail && lastWs > currentWsIdx) {
             const ws = workspaces.itemAt(lastWs) as Workspace;
-            return ws ? Math.min(ws.y + ws.size - offset, s) : 0;
+            return ws ? Math.min((isHorizontal ? ws.x : ws.y) + ws.size - offset, s) : 0;
         }
         return s;
     }
@@ -43,9 +44,10 @@ StyledRect {
     }
 
     clip: true
-    y: offset + mask.y
-    implicitWidth: Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2
-    implicitHeight: size
+    x: isHorizontal ? offset + mask.x : 0
+    y: isHorizontal ? 0 : offset + mask.y
+    implicitWidth: isHorizontal ? size : Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2
+    implicitHeight: isHorizontal ? Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2 : size
     radius: Tokens.rounding.full
     color: Colours.palette.m3primary
 
@@ -54,12 +56,12 @@ StyledRect {
         sourceColor: Colours.palette.m3onSurface
         colorizationColor: Colours.palette.m3onPrimary
 
-        x: 0
-        y: -parent.offset
+        x: root.isHorizontal ? -parent.offset : 0
+        y: root.isHorizontal ? 0 : -parent.offset
         implicitWidth: root.mask.implicitWidth
         implicitHeight: root.mask.implicitHeight
 
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenter: root.isHorizontal ? undefined : parent.horizontalCenter
     }
 
     Behavior on leading {

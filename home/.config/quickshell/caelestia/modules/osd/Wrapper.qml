@@ -18,6 +18,7 @@ Item {
     readonly property bool shouldBeActive: visibilities.osd && Config.osd.enabled && !(visibilities.utilities && Config.utilities.enabled)
     property real offsetScale: shouldBeActive ? 0 : 1
     property real sidebarOffset: sidebarOrSessionVisible ? 12 : 0
+    readonly property real slideOffset: (-implicitWidth - 5 - sidebarOffset) * offsetScale
 
     property real volume
     property bool muted

@@ -1,15 +1,14 @@
 import "./state"
 import QtQuick
-import qs.modules.controlcenter
+import qs.modules.settings
 
 QtObject {
     readonly property list<string> panes: PaneRegistry.labels
 
     required property var root
-    property bool floating: false
     property string active: "network"
     property int activeIndex: 0
-    property bool navExpanded: false
+    property bool navExpanded: true
 
     readonly property BluetoothState bt: BluetoothState {}
     readonly property NetworkState network: NetworkState {}

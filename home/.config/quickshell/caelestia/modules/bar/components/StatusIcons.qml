@@ -14,36 +14,40 @@ StyledRect {
     id: root
 
     property color colour: Colours.palette.m3secondary
+    required property bool isHorizontal
     readonly property alias items: iconColumn
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Tokens.rounding.full
 
     clip: true
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: iconColumn.implicitHeight + Tokens.padding.normal * 2 - (Config.bar.status.showLockStatus && !Hypr.capsLock && !Hypr.numLock ? iconColumn.spacing : 0)
+    implicitWidth: isHorizontal ? iconColumn.implicitWidth + Tokens.padding.normal * 2 : Tokens.sizes.bar.innerWidth
+    implicitHeight: isHorizontal ? Tokens.sizes.bar.innerWidth : iconColumn.implicitHeight + Tokens.padding.normal * 2 - (Config.bar.status.showLockStatus && !Hypr.capsLock && !Hypr.numLock ? Tokens.spacing.smaller / 2 : 0)
 
-    ColumnLayout {
+    GridLayout {
         id: iconColumn
 
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Tokens.padding.normal
+        anchors.centerIn: parent
+        columns: root.isHorizontal ? -1 : 1
+        rows: root.isHorizontal ? 1 : -1
 
-        spacing: Tokens.spacing.smaller / 2
+        columnSpacing: Tokens.spacing.smaller / 2
+        rowSpacing: Tokens.spacing.smaller / 2
 
         // Lock keys status
         WrappedLoader {
             name: "lockstatus"
             active: Config.bar.status.showLockStatus
 
-            sourceComponent: ColumnLayout {
-                spacing: 0
+            sourceComponent: GridLayout {
+                columns: root.isHorizontal ? -1 : 1
+                rows: root.isHorizontal ? 1 : -1
+                rowSpacing: root.isHorizontal ? 0 : Tokens.spacing.smaller / 2
+                columnSpacing: root.isHorizontal ? Tokens.spacing.smaller / 2 : 0
 
                 Item {
-                    implicitWidth: capslockIcon.implicitWidth
-                    implicitHeight: Hypr.capsLock ? capslockIcon.implicitHeight : 0
+                    implicitWidth: root.isHorizontal && !Hypr.capsLock ? 0 : capslockIcon.implicitWidth
+                    implicitHeight: !root.isHorizontal && !Hypr.capsLock ? 0 : capslockIcon.implicitHeight
 
                     MaterialIcon {
                         id: capslockIcon
@@ -71,10 +75,11 @@ StyledRect {
                 }
 
                 Item {
-                    Layout.topMargin: Hypr.capsLock && Hypr.numLock ? iconColumn.spacing : 0
+                    Layout.topMargin: !root.isHorizontal && Hypr.capsLock && Hypr.numLock ? Tokens.spacing.smaller / 2 : 0
+                    Layout.leftMargin: root.isHorizontal && Hypr.capsLock && Hypr.numLock ? Tokens.spacing.smaller / 2 : 0
 
-                    implicitWidth: numlockIcon.implicitWidth
-                    implicitHeight: Hypr.numLock ? numlockIcon.implicitHeight : 0
+                    implicitWidth: root.isHorizontal && !Hypr.numLock ? 0 : numlockIcon.implicitWidth
+                    implicitHeight: !root.isHorizontal && !Hypr.numLock ? 0 : numlockIcon.implicitHeight
 
                     MaterialIcon {
                         id: numlockIcon
@@ -171,8 +176,11 @@ StyledRect {
             name: "bluetooth"
             active: Config.bar.status.showBluetooth
 
-            sourceComponent: ColumnLayout {
-                spacing: Tokens.spacing.smaller / 2
+            sourceComponent: GridLayout {
+                columns: root.isHorizontal ? -1 : 1
+                rows: root.isHorizontal ? 1 : -1
+                rowSpacing: root.isHorizontal ? 0 : Tokens.spacing.smaller / 2
+                columnSpacing: root.isHorizontal ? Tokens.spacing.smaller / 2 : 0
 
                 // Bluetooth icon
                 MaterialIcon {
@@ -246,17 +254,11 @@ StyledRect {
                         return "balance";
                     }
 
-                    const perc = UPower.displayDevice.percentage;
                     const charging = [UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state);
-                    if (perc === 1)
-                        return charging ? "battery_charging_full" : "battery_full";
-                    let level = Math.floor(perc * 7);
-                    if (charging && (level === 4 || level === 1))
-                        level--;
-                    return charging ? `battery_charging_${(level + 3) * 10}` : `battery_${level}_bar`;
+                    return Icons.getBatteryIcon(Math.round(UPower.displayDevice.percentage * 100), charging);
                 }
                 color: !UPower.onBattery || UPower.displayDevice.percentage > 0.2 ? root.colour : Colours.palette.m3error
-                fill: 1
+                fill: !UPower.displayDevice.isLaptopBattery ? 1 : 0
             }
         }
     }
@@ -265,7 +267,7 @@ StyledRect {
         required property string name
 
         asynchronous: true
-        Layout.alignment: Qt.AlignHCenter
+        Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
         visible: active
     }
 }

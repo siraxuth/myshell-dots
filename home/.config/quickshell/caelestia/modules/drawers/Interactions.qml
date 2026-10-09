@@ -5,6 +5,7 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
+import qs.utils
 import qs.modules.bar as Bar
 import qs.modules.bar.popouts as BarPopouts
 
@@ -25,38 +26,58 @@ CustomMouseArea {
     property bool utilitiesShortcutActive
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
-        const panelY = root.borderThickness + panel.y;
+        const panelY = bar.reservedTop + panel.y;
         return y >= panelY - Config.border.rounding && y <= panelY + panel.height + Config.border.rounding;
     }
 
     function withinPanelWidth(panel: Item, x: real, y: real): bool {
-        const panelX = bar.implicitWidth + panel.x;
+        const panelX = bar.reservedLeft + panel.x;
         return x >= panelX - Config.border.rounding && x <= panelX + panel.width + Config.border.rounding;
     }
 
     function inLeftPanel(panel: Item, x: real, y: real): bool {
-        return x < bar.implicitWidth + panel.x + panel.width && withinPanelHeight(panel, x, y);
+        return x < bar.reservedLeft + panel.x + panel.width && withinPanelHeight(panel, x, y);
     }
 
     function inRightPanel(panel: Item, x: real, y: real): bool {
-        return x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panel.x) && withinPanelHeight(panel, x, y);
+        return x > Math.min(width - Config.border.minThickness, bar.reservedLeft + panel.x) && withinPanelHeight(panel, x, y);
     }
 
     function inTopPanel(panel: Item, x: real, y: real): bool {
         const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
-        return y < Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) && withinPanelWidth(panel, x, y);
+        return y < Math.max(Config.border.minThickness, bar.reservedTop + panelHeight) && withinPanelWidth(panel, x, y);
     }
 
     function inBottomPanel(panel: Item, x: real, y: real, isCorner = false): bool {
         const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
-        return y > height - Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y);
+        return y > height - Math.max(Config.border.minThickness, bar.reservedBottom + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y);
+    }
+
+    function inDashboardArea(x: real, y: real): bool {
+        if (!bar.isHorizontal)
+            return inTopPanel(panels.dashboard, x, y);
+
+        const panelWidth = panels.dashboard.width * (1 - panels.dashboard.offsetScale);
+        return x < Math.max(Config.border.minThickness, bar.reservedLeft + panelWidth) && withinPanelHeight(panels.dashboard, x, y);
+    }
+
+    function isOverBar(x: real, y: real): bool {
+        if (bar.isHorizontal)
+            return BarPosition.isTop(bar.position) ? y < bar.clampedHeight : y > height - bar.clampedHeight;
+        return BarPosition.isLeft(bar.position) ? x < bar.clampedWidth : x > width - bar.clampedWidth;
+    }
+
+    function barAlong(x: real, y: real): real {
+        if (!bar.isHorizontal)
+            return y;
+        return x;
     }
 
     function onWheel(event: WheelEvent): void {
         if (fullscreen)
             return;
-        if (event.x < bar.implicitWidth) {
-            bar.handleWheel(event.y, event.angleDelta);
+        if (isOverBar(event.x, event.y)) {
+            bar.handleWheel(barAlong(event.x, event.y), event.angleDelta);
         }
     }
 
@@ -104,14 +125,16 @@ CustomMouseArea {
         }
 
         // Show bar in non-exclusive mode on hover
-        if (!visibilities.bar && Config.bar.showOnHover && x < bar.clampedWidth)
+        if (!visibilities.bar && Config.bar.showOnHover && isOverBar(x, y))
             bar.isHovered = true;
 
         // Show/hide bar on drag
-        if (pressed && dragStart.x < bar.clampedWidth) {
-            if (dragX > Config.bar.dragThreshold)
+        if (pressed && isOverBar(dragStart.x, dragStart.y)) {
+            const alongDelta = bar.isHorizontal ? dragX : dragY;
+            const revealDelta = BarPosition.isRight(bar.position) || BarPosition.isBottom(bar.position) ? -alongDelta : alongDelta;
+            if (revealDelta > Config.bar.dragThreshold)
                 visibilities.bar = true;
-            else if (dragX < -Config.bar.dragThreshold)
+            else if (revealDelta < -Config.bar.dragThreshold)
                 visibilities.bar = false;
         }
 
@@ -129,7 +152,7 @@ CustomMouseArea {
                 root.panels.osd.hovered = true;
             }
 
-            const showSidebar = pressed && dragStart.x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panels.sidebar.x);
+            const showSidebar = pressed && dragStart.x > Math.min(width - Config.border.minThickness, bar.reservedLeft + panels.sidebar.x);
 
             // Show/hide session on drag
             if (pressed && inRightPanel(panels.sessionWrapper, dragStart.x, dragStart.y) && withinPanelHeight(panels.sessionWrapper, x, y)) {
@@ -186,7 +209,7 @@ CustomMouseArea {
 
         // Show dashboard on hover (suppressed while the live-wallpaper picker owns the top
         // slot, and on monitors where the user disabled it — e.g. while drawing with a pen)
-        const showDashboard = Config.dashboard.showOnHover && !visibilities.liveWallpaper && DashboardPrefs.isEnabledFor(root.screen.name) && inTopPanel(panels.dashboard, x, y);
+        const showDashboard = Config.dashboard.showOnHover && !visibilities.liveWallpaper && DashboardPrefs.isEnabledFor(root.screen.name) && inDashboardArea(x, y);
 
         // Always update visibility based on hover if not in shortcut mode
         if (!dashboardShortcutActive) {
@@ -197,10 +220,11 @@ CustomMouseArea {
         }
 
         // Show/hide dashboard on drag (for touchscreen devices)
-        if (DashboardPrefs.isEnabledFor(root.screen.name) && pressed && inTopPanel(panels.dashboard, dragStart.x, dragStart.y) && withinPanelWidth(panels.dashboard, x, y)) {
-            if (dragY > Config.dashboard.dragThreshold)
+        if (DashboardPrefs.isEnabledFor(root.screen.name) && pressed && inDashboardArea(dragStart.x, dragStart.y) && (bar.isHorizontal ? withinPanelHeight(panels.dashboard, x, y) : withinPanelWidth(panels.dashboard, x, y))) {
+            const dashboardDrag = bar.isHorizontal ? dragX : dragY;
+            if (dashboardDrag > Config.dashboard.dragThreshold)
                 visibilities.dashboard = true;
-            else if (dragY < -Config.dashboard.dragThreshold)
+            else if (dashboardDrag < -Config.dashboard.dragThreshold)
                 visibilities.dashboard = false;
         }
 
@@ -216,8 +240,8 @@ CustomMouseArea {
         }
 
         // Show popouts on hover
-        if (x < bar.implicitWidth) {
-            bar.checkPopout(y);
+        if (isOverBar(x, y)) {
+            bar.checkPopout(barAlong(x, y));
         } else if ((!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) && !inLeftPanel(panels.popoutsWrapper, x, y)) {
             popouts.hasCurrent = false;
             bar.closeTray();
@@ -234,7 +258,7 @@ CustomMouseArea {
                 root.utilitiesShortcutActive = false;
 
                 // Also hide dashboard and OSD if they're not being hovered
-                const inDashboardArea = root.inTopPanel(root.panels.dashboard, root.mouseX, root.mouseY);
+                const inDashboardArea = root.inDashboardArea(root.mouseX, root.mouseY);
                 const inOsdArea = root.inRightPanel(root.panels.osdWrapper, root.mouseX, root.mouseY);
 
                 if (!inDashboardArea) {
@@ -250,7 +274,7 @@ CustomMouseArea {
         function onDashboardChanged() {
             if (root.visibilities.dashboard) {
                 // Dashboard became visible, immediately check if this should be shortcut mode
-                const inDashboardArea = root.inTopPanel(root.panels.dashboard, root.mouseX, root.mouseY);
+                const inDashboardArea = root.inDashboardArea(root.mouseX, root.mouseY);
                 if (!inDashboardArea) {
                     root.dashboardShortcutActive = true;
                 }

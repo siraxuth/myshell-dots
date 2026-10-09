@@ -88,12 +88,12 @@ SectionContainer {
 
         label: qsTr("Media update interval")
         value: root.rootItem.mediaUpdateInterval
-        from: 100
+        from: 1000
         to: 10000
-        stepSize: 100
+        stepSize: 500
         suffix: "ms"
         validator: IntValidator {
-            bottom: 100
+            bottom: 1000
             top: 10000
         }
         formatValueFunction: val => Math.round(val).toString()

@@ -16,10 +16,10 @@ Region {
     readonly property real borderThickness: win.contentItem.Config.border.thickness
     readonly property real clampedThickness: win.contentItem.Config.border.clampedThickness
 
-    x: bar.clampedWidth + win.dragMaskPadding
-    y: clampedThickness + win.dragMaskPadding
-    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2
-    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2
+    x: bar.reservedLeft + win.dragMaskPadding
+    y: bar.reservedTop + win.dragMaskPadding
+    width: win.width - bar.reservedLeft - bar.reservedRight - win.dragMaskPadding * 2
+    height: win.height - bar.reservedTop - bar.reservedBottom - win.dragMaskPadding * 2
     intersection: Intersection.Xor
 
     R {
@@ -82,8 +82,8 @@ Region {
     component R: Region {
         required property Item panel
 
-        x: panel.x + root.bar.implicitWidth
-        y: panel.y + root.borderThickness
+        x: panel.x + root.bar.reservedLeft
+        y: panel.y + root.bar.reservedTop
         width: panel.width
         height: panel.height
         intersection: Intersection.Subtract

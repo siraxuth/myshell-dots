@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
+import qs.components.misc
 import qs.services
 
 StyledRect {
@@ -15,6 +16,10 @@ StyledRect {
     implicitHeight: row.implicitHeight + Tokens.padding.large * 2
     radius: Tokens.rounding.large
     color: bgVisible ? Qt.alpha(Colours.palette.m3surface, 0.55) : "transparent"
+
+    Ref {
+        service: SystemUsage
+    }
 
     RowLayout {
         id: row

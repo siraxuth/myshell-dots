@@ -30,6 +30,7 @@ Singleton {
     readonly property string defaultKbLayout: keyboard?.layout.split(",")[0] ?? "??"
     readonly property string kbLayoutFull: keyboard?.activeKeymap ?? "Unknown"
     readonly property string kbLayout: kbMap.get(kbLayoutFull) ?? "??"
+    readonly property bool canSwitchKbLayout: (keyboard?.layout.split(",").filter(layout => layout.trim()).length ?? 0) > 1
     readonly property var kbMap: new Map()
 
     readonly property alias extras: extras
@@ -84,6 +85,20 @@ Singleton {
 
     function monitorFor(screen: ShellScreen): HyprlandMonitor {
         return Hyprland.monitorFor(screen);
+    }
+
+    function cycleKbLayout(): void {
+        if (!canSwitchKbLayout || kbLayoutSwitch.running)
+            return;
+
+        const layouts = keyboard.layout.split(",").map(layout => layout.trim()).filter(layout => layout);
+        const activeIndex = keyboard.lastIpcObject.active_layout_index ?? layouts.indexOf(kbLayout);
+        const nextIndex = activeIndex >= 0 ? (activeIndex + 1) % layouts.length : 0;
+
+        // Use one explicit index for every keyboard so devices that were previously
+        // out of sync all end up on the layout shown by the lock screen.
+        kbLayoutSwitch.command = ["hyprctl", "switchxkblayout", "all", String(nextIndex)];
+        kbLayoutSwitch.running = true;
     }
 
     function reloadDynamicConfs(): void {
@@ -188,6 +203,15 @@ Singleton {
                         root.kbMap.set(match[3], match[2]);
                 }
             }
+        }
+    }
+
+    Process {
+        id: kbLayoutSwitch
+
+        onRunningChanged: {
+            if (!running)
+                root.extras.refreshDevices();
         }
     }
 

@@ -3,29 +3,47 @@
 //@ pragma DefaultEnv QSG_RENDER_LOOP=threaded
 //@ pragma DefaultEnv QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
+import Quickshell
 import "modules"
-import "modules/drawers"
-import "modules/background"
 import "modules/areapicker"
+import "modules/background"
+import "modules/drawers"
 import "modules/emoji"
 import "modules/lock"
-import Quickshell
+import qs.services
 
 ShellRoot {
+    readonly property var eventsService: Events
+
     settings.watchFiles: false
 
-    Background {}
-    Drawers {}
-    EmojiPicker {}
-    AreaPicker {}
+    Background {
+    }
+
+    Drawers {
+    }
+
+    EmojiPicker {
+    }
+
+    AreaPicker {
+    }
+
     Lock {
         id: lock
     }
 
-    ConfigToasts {}
-    Shortcuts {}
-    BatteryMonitor {}
+    ConfigToasts {
+    }
+
+    Shortcuts {
+    }
+
+    BatteryMonitor {
+    }
+
     IdleMonitors {
         lock: lock
     }
+
 }

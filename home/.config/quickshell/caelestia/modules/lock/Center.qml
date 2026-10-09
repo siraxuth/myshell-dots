@@ -128,6 +128,12 @@ ColumnLayout {
             if (root.lock.unlocking)
                 return;
 
+            if (event.key === Qt.Key_Space && (event.modifiers & Qt.MetaModifier)) {
+                Hypr.cycleKbLayout();
+                event.accepted = true;
+                return;
+            }
+
             if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return)
                 inputField.placeholder.animate = false;
 
@@ -208,6 +214,19 @@ ColumnLayout {
                 }
             }
         }
+    }
+
+    IconTextButton {
+        Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: -Tokens.spacing.large
+
+        visible: Hypr.canSwitchKbLayout
+        icon: "keyboard"
+        text: qsTr("Keyboard · %1").arg(Hypr.kbLayout.toUpperCase())
+        type: IconTextButton.Tonal
+        stateLayer.disabled: !Hypr.canSwitchKbLayout
+
+        onClicked: Hypr.cycleKbLayout()
     }
 
     Item {

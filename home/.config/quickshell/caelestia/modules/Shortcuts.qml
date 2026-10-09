@@ -4,7 +4,7 @@ import Quickshell.Io
 import Caelestia
 import qs.components.misc
 import qs.services
-import qs.modules.controlcenter
+import qs.modules.settings
 
 Scope {
     id: root
@@ -12,19 +12,15 @@ Scope {
     property bool launcherInterrupted
     readonly property bool hasFullscreen: Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false
 
-    // Eagerly instantiate LiveWallpaper so its Wallpapers-dir watcher runs from boot —
-    // otherwise the singleton (and the watcher) only spawns the first time the picker opens,
-    // and videos dropped in beforehand never get a first-frame thumb auto-generated.
-    Component.onCompleted: LiveWallpaper.refresh()
+    Component.onCompleted: Wallpapers.refreshWallpapers()
 
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
         name: "controlCenter"
         description: "Open control center"
-        onPressed: WindowFactory.create()
+        onPressed: SettingsOpener.open()
     }
-
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
@@ -168,12 +164,11 @@ Scope {
 
     IpcHandler {
         function open(): void {
-            WindowFactory.create();
+            SettingsOpener.open();
         }
 
         target: "controlCenter"
     }
-
     IpcHandler {
         function info(title: string, message: string, icon: string): void {
             Toaster.toast(title, message, icon, Toast.Info);

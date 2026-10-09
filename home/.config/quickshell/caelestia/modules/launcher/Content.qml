@@ -18,6 +18,19 @@ Item {
     readonly property int rounding: Tokens.rounding.large
     readonly property bool searchTop: LauncherPrefs.searchPosition === "top"
 
+    property real lastRandomTime: 0
+
+    function selectRandomWallpaper(): void {
+        const now = Date.now();
+        if (now - lastRandomTime < 80) return;
+        lastRandomTime = now;
+        Wallpapers.setRandom();
+    }
+
+    function triggerRefresh(): void {
+        Wallpapers.refreshWallpapers();
+    }
+
     implicitWidth: listWrapper.width + padding * 2
     implicitHeight: searchWrapper.height + listWrapper.height + padding * 2
 
@@ -42,8 +55,8 @@ Item {
     Item {
         id: listWrapper
 
-        implicitWidth: list.width
-        implicitHeight: list.height + root.padding
+        implicitWidth: Math.max(list.width, wallpaperButtonsRow.visible ? wallpaperButtonsRow.implicitWidth : 0)
+        implicitHeight: list.height + root.padding + (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + Tokens.spacing.normal + wallpaperButtonsRow.implicitHeight + Tokens.spacing.small : 0)
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: searchWrapper.top
@@ -56,10 +69,65 @@ Item {
             content: root
             visibilities: root.visibilities
             panels: root.panels
-            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3
+            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3 - (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + wallpaperButtonsRow.implicitHeight + Tokens.spacing.normal + Tokens.spacing.small : 0)
             search: search
             padding: root.padding
             rounding: root.rounding
+        }
+
+        ColorFilterBar {
+            id: colorFilterBar
+
+            visible: list.showWallpapers
+            anchors.top: list.bottom
+            anchors.topMargin: Tokens.spacing.normal
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
+        Row {
+            id: wallpaperButtonsRow
+
+            visible: list.showWallpapers
+            anchors.top: colorFilterBar.visible ? colorFilterBar.bottom : list.bottom
+            anchors.topMargin: Tokens.spacing.small
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Tokens.spacing.small
+
+            IconTextButton {
+                icon: "photo_library"
+                text: qsTr("All")
+                toggle: true
+                checked: Wallpapers.filterMode === 0
+                onClicked: Wallpapers.filterMode = 0
+            }
+
+            IconTextButton {
+                icon: "image"
+                text: qsTr("Static")
+                toggle: true
+                checked: Wallpapers.filterMode === 1
+                onClicked: Wallpapers.filterMode = 1
+            }
+
+            IconTextButton {
+                icon: "smart_display"
+                text: qsTr("Live")
+                toggle: true
+                checked: Wallpapers.filterMode === 2
+                onClicked: Wallpapers.filterMode = 2
+            }
+
+            IconTextButton {
+                icon: "shuffle"
+                text: qsTr("Random")
+                onClicked: root.selectRandomWallpaper()
+            }
+
+            IconTextButton {
+                icon: "refresh"
+                text: qsTr("Refresh")
+                onClicked: root.triggerRefresh()
+            }
         }
     }
 
@@ -126,10 +194,26 @@ Item {
             Keys.onEscapePressed: root.visibilities.launcher = false
 
             Keys.onPressed: event => {
-                if (!GlobalConfig.launcher.vimKeybinds)
-                    return;
-
                 if (event.modifiers & Qt.ControlModifier) {
+                    if (list.showWallpapers) {
+                        if (event.key === Qt.Key_F) {
+                            Wallpapers.cycleFilterMode();
+                            event.accepted = true;
+                            return;
+                        } else if (event.key === Qt.Key_R) {
+                            root.triggerRefresh();
+                            event.accepted = true;
+                            return;
+                        } else if (event.key === Qt.Key_D) {
+                            root.selectRandomWallpaper();
+                            event.accepted = true;
+                            return;
+                        }
+                    }
+
+                    if (!GlobalConfig.launcher.vimKeybinds)
+                        return;
+
                     if (event.key === Qt.Key_J || event.key === Qt.Key_N) {
                         list.currentList?.incrementCurrentIndex();
                         event.accepted = true;
@@ -137,12 +221,20 @@ Item {
                         list.currentList?.decrementCurrentIndex();
                         event.accepted = true;
                     }
-                } else if (event.key === Qt.Key_Tab) {
-                    list.currentList?.incrementCurrentIndex();
+                } else if (list.showWallpapers && event.key === Qt.Key_Backtab) {
+                    Wallpapers.cycleColorFilter();
                     event.accepted = true;
-                } else if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
-                    list.currentList?.decrementCurrentIndex();
-                    event.accepted = true;
+                } else {
+                    if (!GlobalConfig.launcher.vimKeybinds)
+                        return;
+
+                    if (event.key === Qt.Key_Tab) {
+                        list.currentList?.incrementCurrentIndex();
+                        event.accepted = true;
+                    } else if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
+                        list.currentList?.decrementCurrentIndex();
+                        event.accepted = true;
+                    }
                 }
             }
 
@@ -150,8 +242,11 @@ Item {
 
             Connections {
                 function onLauncherChanged(): void {
-                    if (!root.visibilities.launcher)
+                    if (!root.visibilities.launcher) {
                         search.text = "";
+                        Wallpapers.colorFilter = "";
+                        Wallpapers.filterMode = 0;
+                    }
                 }
 
                 function onSessionChanged(): void {

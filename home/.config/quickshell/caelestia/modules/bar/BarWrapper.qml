@@ -5,6 +5,7 @@ import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.utils
+import qs.services
 import qs.modules.bar.popouts as BarPopouts
 
 Item {
@@ -16,11 +17,21 @@ Item {
     required property bool fullscreen
 
     readonly property bool disabled: Strings.testRegexList(Config.bar.excludedScreens, screen.name)
+    readonly property string position: BarPositionPrefs.position
+    readonly property bool isHorizontal: BarPosition.isHorizontal(position)
 
-    readonly property int clampedWidth: Math.max(Config.border.minThickness, implicitWidth)
+    property real extent: fullscreen ? 0 : Config.border.thickness
+    readonly property int clampedWidth: Math.max(Config.border.minThickness, extent)
+    readonly property int clampedHeight: Math.max(Config.border.minThickness, extent)
+    readonly property int reservedLeft: BarPosition.isLeft(position) ? clampedWidth : Config.border.thickness
+    readonly property int reservedRight: BarPosition.isRight(position) ? clampedWidth : Config.border.thickness
+    readonly property int reservedTop: BarPosition.isTop(position) ? clampedHeight : Config.border.thickness
+    readonly property int reservedBottom: BarPosition.isBottom(position) ? clampedHeight : Config.border.thickness
     readonly property int padding: Math.max(Tokens.padding.smaller, Config.border.thickness)
     readonly property int contentWidth: Tokens.sizes.bar.innerWidth + padding * 2
-    readonly property int exclusiveZone: !disabled && (Config.bar.persistent || visibilities.bar) ? contentWidth : Config.border.thickness
+    readonly property int contentHeight: contentWidth
+    readonly property int contentThickness: contentWidth
+    readonly property int exclusiveZone: !disabled && (Config.bar.persistent || visibilities.bar) ? contentThickness : Config.border.thickness
     readonly property bool shouldBeVisible: !fullscreen && !disabled && (Config.bar.persistent || visibilities.bar || isHovered)
     property bool isHovered
 
@@ -37,15 +48,16 @@ Item {
     }
 
     clip: true
-    visible: width > 0
-    implicitWidth: fullscreen ? 0 : Config.border.thickness
+    visible: extent > 0
+    implicitWidth: isHorizontal ? screen.width : extent
+    implicitHeight: isHorizontal ? extent : screen.height
 
     states: State {
         name: "visible"
         when: root.shouldBeVisible
 
         PropertyChanges {
-            root.implicitWidth: root.contentWidth
+            root.extent: root.contentThickness
         }
     }
 
@@ -56,7 +68,7 @@ Item {
 
             Anim {
                 target: root
-                property: "implicitWidth"
+                property: "extent"
                 type: Anim.DefaultSpatial
             }
         },
@@ -66,7 +78,7 @@ Item {
 
             Anim {
                 target: root
-                property: "implicitWidth"
+                property: "extent"
                 type: Anim.Emphasized
             }
         }
@@ -75,14 +87,17 @@ Item {
     Loader {
         id: content
 
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
+        x: root.isHorizontal ? 0 : parent.width - width
+        y: root.isHorizontal && BarPosition.isBottom(root.position) ? parent.height - height : 0
+        width: root.isHorizontal ? root.screen.width : root.contentThickness
+        height: root.isHorizontal ? root.contentThickness : root.screen.height
 
         active: root.shouldBeVisible || root.visible
 
         sourceComponent: Bar {
-            width: root.contentWidth
+            width: root.isHorizontal ? root.screen.width : root.contentThickness
+            height: root.isHorizontal ? root.contentThickness : root.screen.height
+            isHorizontal: root.isHorizontal
             screen: root.screen
             visibilities: root.visibilities
             popouts: root.popouts // qmllint disable incompatible-type

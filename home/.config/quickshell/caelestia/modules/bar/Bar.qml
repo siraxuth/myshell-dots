@@ -10,13 +10,14 @@ import Caelestia.Config
 import qs.components
 import qs.services
 
-ColumnLayout {
+GridLayout {
     id: root
 
     required property ShellScreen screen
     required property DrawerVisibilities visibilities
     required property BarPopouts.Wrapper popouts
     required property bool fullscreen
+    required property bool isHorizontal
     readonly property int vPadding: Tokens.padding.large
 
     function closeTray(): void {
@@ -31,8 +32,8 @@ ColumnLayout {
         }
     }
 
-    function checkPopout(y: real): void {
-        const ch = childAt(width / 2, y) as WrappedLoader;
+    function checkPopout(along: real): void {
+        const ch = childAt(isHorizontal ? along : width / 2, isHorizontal ? height / 2 : along) as WrappedLoader;
 
         if (ch?.id !== "tray")
             closeTray();
@@ -43,24 +44,24 @@ ColumnLayout {
         }
 
         const id = ch.id;
-        const top = ch.y;
-
         if (id === "statusIcons" && Config.bar.popouts.statusIcons) {
             const items = (ch.item as StatusIcons).items;
-            const icon = items.childAt(items.width / 2, mapToItem(items, 0, y).y);
+            const icon = items.childAt(isHorizontal ? mapToItem(items, along, 0).x : items.width / 2, isHorizontal ? items.height / 2 : mapToItem(items, 0, along).y);
             if (icon) {
                 popouts.currentName = icon.name;
-                popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
+                popouts.currentCenter = Qt.binding(() => isHorizontal ? icon.mapToItem(root, icon.implicitWidth / 2, 0).x : icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
                 popouts.hasCurrent = true;
             }
         } else if (id === "tray" && Config.bar.popouts.tray) {
             const tray = ch.item as Tray;
-            if (!Config.bar.tray.compact || (tray.expanded && !tray.expandIcon.contains(mapToItem(tray.expandIcon, tray.implicitWidth / 2, y)))) {
-                const index = Math.floor(((y - top - tray.padding * 2 + tray.spacing) / tray.layout.implicitHeight) * tray.items.count);
+            const axisValue = isHorizontal ? mapToItem(tray.layout, along, 0).x : mapToItem(tray.layout, 0, along).y;
+            const axisLength = isHorizontal ? tray.layout.implicitWidth : tray.layout.implicitHeight;
+            if (!Config.bar.tray.compact || (tray.expanded && !tray.expandIcon.contains(mapToItem(tray.expandIcon, tray.implicitWidth / 2, along)))) {
+                const index = Math.floor((axisValue / Math.max(1, axisLength)) * tray.items.count);
                 const trayItem = tray.items.itemAt(index);
                 if (trayItem) {
                     popouts.currentName = `traymenu${index}`;
-                    popouts.currentCenter = Qt.binding(() => trayItem.mapToItem(root, 0, trayItem.implicitHeight / 2).y);
+                    popouts.currentCenter = Qt.binding(() => isHorizontal ? trayItem.mapToItem(root, trayItem.implicitWidth / 2, 0).x : trayItem.mapToItem(root, 0, trayItem.implicitHeight / 2).y);
                     popouts.hasCurrent = true;
                 } else {
                     popouts.hasCurrent = false;
@@ -71,13 +72,17 @@ ColumnLayout {
             }
         } else if (id === "activeWindow" && Config.bar.popouts.activeWindow && Config.bar.activeWindow.showOnHover) {
             popouts.currentName = id.toLowerCase();
-            popouts.currentCenter = (ch.item as Item).mapToItem(root, 0, (ch.item as Item).implicitHeight / 2).y ?? 0;
+            popouts.currentCenter = isHorizontal ? (ch.item as Item).mapToItem(root, (ch.item as Item).implicitWidth / 2, 0).x : (ch.item as Item).mapToItem(root, 0, (ch.item as Item).implicitHeight / 2).y ?? 0;
+            popouts.hasCurrent = true;
+        } else if (id === "clock") {
+            popouts.currentName = "clock";
+            popouts.currentCenter = isHorizontal ? ch.item.mapToItem(root, ch.item.implicitWidth / 2, 0).x : ch.item.mapToItem(root, 0, ch.item.implicitHeight / 2).y;
             popouts.hasCurrent = true;
         }
     }
 
     function handleWheel(y: real, angleDelta: point): void {
-        const ch = childAt(width / 2, y) as WrappedLoader;
+        const ch = childAt(isHorizontal ? y : width / 2, isHorizontal ? height / 2 : y) as WrappedLoader;
         if (ch?.id === "workspaces" && Config.bar.scrollActions.workspaces) {
             // Workspace scroll
             const mon = (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor);
@@ -86,7 +91,7 @@ ColumnLayout {
                 Hypr.dispatch(`togglespecialworkspace ${specialWs.slice(8)}`);
             else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
                 Hypr.dispatch(`workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
-        } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
+        } else if (y < (isHorizontal ? screen.width : screen.height) / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)
                 Audio.incrementVolume();
@@ -102,7 +107,9 @@ ColumnLayout {
         }
     }
 
-    spacing: Tokens.spacing.normal
+    columns: isHorizontal ? -1 : 1
+    rowSpacing: isHorizontal ? 0 : Tokens.spacing.normal
+    columnSpacing: isHorizontal ? Tokens.spacing.normal : 0
 
     Repeater {
         id: repeater
@@ -115,7 +122,8 @@ ColumnLayout {
             DelegateChoice {
                 roleValue: "spacer"
                 delegate: WrappedLoader {
-                    Layout.fillHeight: enabled
+                    Layout.fillWidth: root.isHorizontal && enabled
+                    Layout.fillHeight: !root.isHorizontal && enabled
                 }
             }
             DelegateChoice {
@@ -130,17 +138,20 @@ ColumnLayout {
                     sourceComponent: Workspaces {
                         screen: root.screen
                         fullscreen: root.fullscreen
+                        isHorizontal: root.isHorizontal
                     }
                 }
             }
             DelegateChoice {
                 roleValue: "activeWindow"
                 delegate: WrappedLoader {
-                    Layout.fillWidth: true
+                    Layout.fillWidth: root.isHorizontal
+                    Layout.fillHeight: !root.isHorizontal
                     visible: !root.fullscreen
                     sourceComponent: ActiveWindow {
                         bar: root
                         monitor: Brightness.getMonitorForScreen(root.screen)
+                        isHorizontal: root.isHorizontal
                     }
                 }
             }
@@ -148,21 +159,21 @@ ColumnLayout {
                 roleValue: "tray"
                 delegate: WrappedLoader {
                     visible: !root.fullscreen
-                    sourceComponent: Tray {}
+                    sourceComponent: Tray { isHorizontal: root.isHorizontal }
                 }
             }
             DelegateChoice {
                 roleValue: "clock"
                 delegate: WrappedLoader {
                     visible: !root.fullscreen
-                    sourceComponent: Clock {}
+                    sourceComponent: Clock { isHorizontal: root.isHorizontal }
                 }
             }
             DelegateChoice {
                 roleValue: "statusIcons"
                 delegate: WrappedLoader {
                     visible: !root.fullscreen
-                    sourceComponent: StatusIcons {}
+                    sourceComponent: StatusIcons { isHorizontal: root.isHorizontal }
                 }
             }
             DelegateChoice {
@@ -201,11 +212,13 @@ ColumnLayout {
         }
 
         asynchronous: true
-        Layout.alignment: Qt.AlignHCenter
+        Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
         // Cursed ahh thing to add padding to first and last enabled components
-        Layout.topMargin: findFirstEnabled() === this ? root.vPadding : 0
-        Layout.bottomMargin: findLastEnabled() === this ? root.vPadding : 0
+        Layout.leftMargin: root.isHorizontal && findFirstEnabled() === this ? root.vPadding : 0
+        Layout.rightMargin: root.isHorizontal && findLastEnabled() === this ? root.vPadding : 0
+        Layout.topMargin: !root.isHorizontal && findFirstEnabled() === this ? root.vPadding : 0
+        Layout.bottomMargin: !root.isHorizontal && findLastEnabled() === this ? root.vPadding : 0
 
         visible: enabled
         active: enabled

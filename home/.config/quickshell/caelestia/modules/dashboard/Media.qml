@@ -67,7 +67,7 @@ Item {
 
     Timer {
         running: Players.active?.isPlaying ?? false
-        interval: GlobalConfig.dashboard.mediaUpdateInterval
+        interval: Math.max(1000, GlobalConfig.dashboard.mediaUpdateInterval)
         triggeredOnStart: true
         repeat: true
         onTriggered: {

@@ -4,8 +4,10 @@ import ".."
 import "../components"
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
+import qs.components.effects
 import qs.services
 
 Item {
@@ -26,17 +28,20 @@ Item {
         WidgetsPrefs.remove(i);
     }
 
-    Flickable {
+    PaneFrame {
         anchors.fill: parent
-        contentHeight: col.implicitHeight + Tokens.padding.large * 2
-        clip: true
+        Flickable {
+            anchors.fill: parent
+            contentHeight: col.implicitHeight + Tokens.padding.large * 2
+            clip: true
 
-        ColumnLayout {
-            id: col
+            ColumnLayout {
+                id: col
 
-            x: Tokens.padding.large
-            y: Tokens.padding.large
-            width: parent.width - Tokens.padding.large * 2
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+
             spacing: Tokens.spacing.normal
 
             SettingsHeader {
@@ -98,6 +103,7 @@ Item {
                         color: Colours.palette.m3onPrimaryContainer
                     }
                 }
+            }
             }
         }
     }

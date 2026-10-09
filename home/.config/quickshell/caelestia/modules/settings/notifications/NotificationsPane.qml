@@ -60,34 +60,14 @@ Item {
 
     anchors.fill: parent
 
-    ClippingRectangle {
-        id: notificationsClippingRect
-
+    PaneFrame {
         anchors.fill: parent
-        anchors.margins: Tokens.padding.normal
-        anchors.leftMargin: 0
-        anchors.rightMargin: Tokens.padding.normal
-
-        color: "transparent"
-        radius: notificationsBorder.innerRadius
-
         Loader {
             id: notificationsLoader
 
             anchors.fill: parent
-            anchors.margins: Tokens.padding.large + Tokens.padding.normal
-            anchors.leftMargin: Tokens.padding.large
-            anchors.rightMargin: Tokens.padding.large
-
             sourceComponent: notificationsContentComponent
         }
-    }
-
-    InnerBorder {
-        id: notificationsBorder
-
-        leftThickness: 0
-        rightThickness: Tokens.padding.normal
     }
 
     Component {

@@ -142,8 +142,8 @@ ColumnLayout {
                     StyledText {
                         Layout.fillWidth: true
                         text: {
-                            const hour = forecastHour.modelData?.hour ?? 0;
-                            return hour > 12 ? `${(hour - 12).toString().padStart(2, "0")} PM` : `${hour.toString().padStart(2, "0")} AM`;
+                            const hour = Number(forecastHour.modelData?.hour ?? 0);
+                            return `${String(hour).padStart(2, "0")}:00`;
                         }
                         color: Colours.palette.m3outline
                         horizontalAlignment: Text.AlignHCenter

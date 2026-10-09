@@ -2,7 +2,7 @@ import QtQuick
 import qs.components
 import qs.services
 import qs.config
-import qs.modules.controlcenter
+import qs.modules.settings
 
 Item {
     id: root
@@ -13,9 +13,7 @@ Item {
     StateLayer {
         // Cursed workaround to make the height larger than the parent
         function onClicked(): void {
-            WindowFactory.create(null, {
-                active: "network"
-            });
+            SettingsOpener.open();
         }
 
         anchors.fill: undefined

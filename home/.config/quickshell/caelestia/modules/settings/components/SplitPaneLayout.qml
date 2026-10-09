@@ -2,10 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Widgets
 import Caelestia.Config
 import qs.components
-import qs.components.effects
 
 RowLayout {
     id: root
@@ -28,25 +26,18 @@ RowLayout {
         Layout.minimumWidth: root.leftMinimumWidth
         Layout.fillHeight: true
 
-        ClippingRectangle {
-            id: leftClippingRect
+        PaneFrame {
+            id: leftFrame
 
             anchors.fill: parent
-            anchors.margins: Tokens.padding.normal
-            anchors.leftMargin: 0
-            anchors.rightMargin: Tokens.padding.normal / 2
-
-            radius: leftBorder.innerRadius
-            color: "transparent"
+            frameRightMargin: Tokens.padding.normal / 2
+            contentRightMargin: Tokens.padding.large + Tokens.padding.normal / 2
+            borderRightThickness: Tokens.padding.normal / 2
 
             Loader {
                 id: leftLoader
 
                 anchors.fill: parent
-                anchors.margins: Tokens.padding.large + Tokens.padding.normal
-                anchors.leftMargin: Tokens.padding.large
-                anchors.rightMargin: Tokens.padding.large + Tokens.padding.normal / 2
-
                 asynchronous: true
                 sourceComponent: root.leftContent
 
@@ -58,12 +49,6 @@ RowLayout {
             }
         }
 
-        InnerBorder {
-            id: leftBorder
-
-            leftThickness: 0
-            rightThickness: Tokens.padding.normal / 2
-        }
     }
 
     Item {
@@ -72,23 +57,21 @@ RowLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
 
-        ClippingRectangle {
-            id: rightClippingRect
+        PaneFrame {
+            id: rightFrame
 
             anchors.fill: parent
-            anchors.margins: Tokens.padding.normal
-            anchors.leftMargin: 0
-            anchors.rightMargin: Tokens.padding.normal / 2
-
-            radius: rightBorder.innerRadius
-            color: "transparent"
+            frameRightMargin: Tokens.padding.normal / 2
+            contentTopMargin: Tokens.padding.large * 2
+            contentRightMargin: Tokens.padding.large * 2
+            contentBottomMargin: Tokens.padding.large * 2
+            contentLeftMargin: Tokens.padding.large * 2
+            borderLeftThickness: Tokens.padding.normal / 2
 
             Loader {
                 id: rightLoader
 
                 anchors.fill: parent
-                anchors.margins: Tokens.padding.large * 2
-
                 asynchronous: true
                 sourceComponent: root.rightContent
 
@@ -100,10 +83,5 @@ RowLayout {
             }
         }
 
-        InnerBorder {
-            id: rightBorder
-
-            leftThickness: Tokens.padding.normal / 2
-        }
     }
 }

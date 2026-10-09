@@ -16,11 +16,13 @@ Variants {
 
         required property ShellScreen modelData
 
+        readonly property var taskbar: Visibilities.bars.get(modelData)
+
         screen: modelData
         name: "background"
         WlrLayershell.exclusionMode: ExclusionMode.Ignore
-        WlrLayershell.layer: contentItem.Config.background.wallpaperEnabled ? WlrLayer.Background : WlrLayer.Bottom
-        color: contentItem.Config.background.wallpaperEnabled ? "black" : "transparent"
+        WlrLayershell.layer: WlrLayer.Background
+        color: "black"
         surfaceFormat.opaque: false
 
         anchors.top: true
@@ -39,7 +41,7 @@ Variants {
                 asynchronous: true
 
                 anchors.fill: parent
-                active: Config.background.wallpaperEnabled
+                active: true
 
                 sourceComponent: Wallpaper {}
             }
@@ -58,7 +60,9 @@ Variants {
             active: Config.background.desktopClock.enabled
 
             anchors.margins: Tokens.padding.large * 2
-            anchors.leftMargin: Tokens.padding.large * 2 + Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness)
+            anchors.leftMargin: Tokens.padding.large * 2 + (win.taskbar?.position === "left" && state.endsWith("-left") ? Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness) : 0)
+            anchors.topMargin: Tokens.padding.large * 2 + (win.taskbar?.position === "top" && state.startsWith("top-") ? Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness) : 0)
+            anchors.bottomMargin: Tokens.padding.large * 2 + (win.taskbar?.position === "bottom" && state.startsWith("bottom-") ? Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness) : 0)
 
             state: Config.background.desktopClock.position
             states: [

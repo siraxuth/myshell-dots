@@ -87,13 +87,13 @@ SectionContainer {
 
         label: qsTr("Resource update interval")
         value: root.rootItem.resourceUpdateInterval
-        from: 100
-        to: 10000
-        stepSize: 100
+        from: 5000
+        to: 60000
+        stepSize: 1000
         suffix: "ms"
         validator: IntValidator {
-            bottom: 100
-            top: 10000
+            bottom: 5000
+            top: 60000
         }
         formatValueFunction: val => Math.round(val).toString()
         parseValueFunction: text => parseInt(text)

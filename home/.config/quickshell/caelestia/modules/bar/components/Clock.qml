@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.services
@@ -10,22 +11,26 @@ StyledRect {
 
     readonly property color colour: Colours.palette.m3tertiary
     readonly property int padding: Config.bar.clock.background ? Tokens.padding.normal : Tokens.padding.small
+    required property bool isHorizontal
 
-    implicitWidth: Tokens.sizes.bar.innerWidth
-    implicitHeight: layout.implicitHeight + root.padding * 2
+    implicitWidth: isHorizontal ? layout.implicitWidth + root.padding * 2 : Tokens.sizes.bar.innerWidth
+    implicitHeight: isHorizontal ? Tokens.sizes.bar.innerWidth : layout.implicitHeight + root.padding * 2
 
     color: Qt.alpha(Colours.tPalette.m3surfaceContainer, Config.bar.clock.background ? Colours.tPalette.m3surfaceContainer.a : 0)
     radius: Tokens.rounding.full
 
-    Column {
+    GridLayout {
         id: layout
 
         anchors.centerIn: parent
-        spacing: Tokens.spacing.small
+        columns: root.isHorizontal ? -1 : 1
+        rows: root.isHorizontal ? 1 : -1
+        columnSpacing: Tokens.spacing.small
+        rowSpacing: Tokens.spacing.small
 
         Loader {
             asynchronous: true
-            anchors.horizontalCenter: parent.horizontalCenter
+            Layout.alignment: Qt.AlignVCenter
 
             active: Config.bar.clock.showIcon
             visible: active
@@ -37,32 +42,31 @@ StyledRect {
         }
 
         StyledText {
-            anchors.horizontalCenter: parent.horizontalCenter
+            Layout.alignment: Qt.AlignVCenter
 
             visible: Config.bar.clock.showDate
 
             horizontalAlignment: StyledText.AlignHCenter
-            text: Time.format("ddd\nd")
+            text: Time.format(root.isHorizontal ? "ddd d" : "ddd\nd")
             font.pointSize: Tokens.font.size.smaller
             font.family: Tokens.font.family.sans
             color: root.colour
         }
 
         Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
+            Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
             visible: Config.bar.clock.showDate
-            height: visible ? 1 : 0
-
-            width: parent.width * 0.8
+            width: root.isHorizontal ? 1 : parent.width * 0.8
+            height: root.isHorizontal ? parent.height * 0.8 : 1
             color: root.colour
             opacity: 0.2
         }
 
         StyledText {
-            anchors.horizontalCenter: parent.horizontalCenter
+            Layout.alignment: Qt.AlignVCenter
 
             horizontalAlignment: StyledText.AlignHCenter
-            text: Time.format(GlobalConfig.services.useTwelveHourClock ? "hh\nmm\nA" : "hh\nmm")
+            text: Time.format(root.isHorizontal ? "HH:mm" : "HH\nmm")
             font.pointSize: Tokens.font.size.smaller
             font.family: Tokens.font.family.mono
             color: root.colour

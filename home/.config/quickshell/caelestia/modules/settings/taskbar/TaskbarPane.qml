@@ -19,6 +19,7 @@ Item {
 
     required property Session session
 
+    property string barPosition: BarPositionPrefs.position
     property bool activeWindowCompact: Config.bar.activeWindow.compact ?? false
     property bool activeWindowInverted: Config.bar.activeWindow.inverted ?? false
     property bool clockShowIcon: Config.bar.clock.showIcon ?? true
@@ -121,35 +122,15 @@ Item {
         id: entriesModel
     }
 
-    ClippingRectangle {
-        id: taskbarClippingRect
-
+    PaneFrame {
         anchors.fill: parent
-        anchors.margins: Tokens.padding.normal
-        anchors.leftMargin: 0
-        anchors.rightMargin: Tokens.padding.normal
-
-        radius: taskbarBorder.innerRadius
-        color: "transparent"
-
         Loader {
             id: taskbarLoader
 
             anchors.fill: parent
-            anchors.margins: Tokens.padding.large + Tokens.padding.normal
-            anchors.leftMargin: Tokens.padding.large
-            anchors.rightMargin: Tokens.padding.large
-
             asynchronous: true
             sourceComponent: taskbarContentComponent
         }
-    }
-
-    InnerBorder {
-        id: taskbarBorder
-
-        leftThickness: 0
-        rightThickness: Tokens.padding.normal
     }
 
     Component {
@@ -181,6 +162,42 @@ Item {
                         text: qsTr("Taskbar")
                         font.pointSize: Tokens.font.size.large
                         font.weight: 500
+                    }
+                }
+
+                SectionContainer {
+                    Layout.fillWidth: true
+                    alignTop: true
+
+                    StyledText {
+                        text: qsTr("Placement")
+                        font.pointSize: Tokens.font.size.normal
+                    }
+
+                    SplitButtonRow {
+                        id: positionSelector
+
+                        label: qsTr("Position")
+                        menuItems: [
+                            MenuItem {
+                                property string value: "left"
+                                text: qsTr("Left")
+                            },
+                            MenuItem {
+                                property string value: "top"
+                                text: qsTr("Top")
+                            },
+                            MenuItem {
+                                property string value: "bottom"
+                                text: qsTr("Bottom")
+                            }
+                        ]
+
+                        active: menuItems.find(item => item.value === root.barPosition)
+                        onSelected: item => {
+                            BarPositionPrefs.setPosition(item.value);
+                            root.saveConfig();
+                        }
                     }
                 }
 

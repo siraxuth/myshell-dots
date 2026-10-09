@@ -104,7 +104,7 @@ Singleton {
     ImageAnalyser {
         id: analyser
 
-        source: Wallpapers.current
+        source: Wallpapers.isVideoPath(Wallpapers.current) ? Wallpapers.videoThumbPath(Wallpapers.current) : Wallpapers.current
     }
 
     Timer {

@@ -175,18 +175,19 @@ Item {
         }
     }
 
-    Flickable {
+    PaneFrame {
         anchors.fill: parent
-        contentHeight: layout.implicitHeight + Tokens.padding.large * 2
-        clip: true
 
-        ColumnLayout {
-            id: layout
+        Flickable {
+            anchors.fill: parent
+            contentHeight: layout.implicitHeight
+            clip: true
 
-            x: Tokens.padding.large
-            y: Tokens.padding.large
-            width: parent.width - Tokens.padding.large * 2
-            spacing: Tokens.spacing.normal
+            ColumnLayout {
+                id: layout
+
+                width: parent.width
+                spacing: Tokens.spacing.normal
 
             SettingsHeader {
                 icon: "desktop_windows"
@@ -556,6 +557,7 @@ Item {
                         }
                     }
                 }
+            }
             }
         }
     }

@@ -12,6 +12,9 @@ Item {
     required property Repeater workspaces
     required property var occupied
     required property int groupOffset
+    required property bool isHorizontal
+
+    anchors.fill: parent
 
     property list<var> pills: []
 
@@ -62,11 +65,10 @@ Item {
                 return i % Config.bar.workspaces.shown;
             }
 
-            anchors.horizontalCenter: root.horizontalCenter
-
-            y: (start?.y ?? 0) - 1
-            implicitWidth: Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2 + 2
-            implicitHeight: start && end ? end.y + end.size - start.y + 2 : 0
+            x: root.isHorizontal ? (start?.x ?? 0) - 1 : (root.width - width) / 2
+            y: root.isHorizontal ? Tokens.padding.small : (start?.y ?? 0) - 1
+            implicitWidth: root.isHorizontal ? (start && end ? end.x + end.size - start.x + 2 : 0) : Tokens.sizes.bar.innerWidth - Tokens.padding.small * 2
+            implicitHeight: root.isHorizontal ? parent.height - Tokens.padding.small * 2 : (start && end ? end.y + end.size - start.y + 2 : 0)
 
             color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
             radius: Tokens.rounding.full

@@ -7,7 +7,7 @@ import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
 import qs.services
-import qs.modules.controlcenter
+import qs.modules.settings
 import qs.modules.windowinfo
 
 Item {
@@ -78,8 +78,8 @@ Item {
     }
 
     Keys.onPressed: event => {
-        // Don't intercept keys when password popout is active - let it handle them
-        if (currentName === "wirelesspassword") {
+        // Let the password dialog and calendar handle their own keyboard input.
+        if (currentName === "wirelesspassword" || currentName === "clock") {
             event.accepted = false;
         }
     }
@@ -97,7 +97,7 @@ Item {
     }
 
     Binding {
-        when: root.isDetached || (root.hasCurrent && root.currentName === "wirelesspassword")
+        when: root.isDetached || (root.hasCurrent && (root.currentName === "wirelesspassword" || root.currentName === "clock"))
 
         target: QsWindow.window
         property: "WlrLayershell.keyboardFocus"

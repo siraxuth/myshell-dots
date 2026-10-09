@@ -3,8 +3,8 @@ import Quickshell.Io
 JsonObject {
     property bool enabled: true
     property bool showOnHover: true
-    property int mediaUpdateInterval: 500
-    property int resourceUpdateInterval: 1000
+    property int mediaUpdateInterval: 1000
+    property int resourceUpdateInterval: 10000
     property int dragThreshold: 50
     property bool showDashboard: true
     property bool showMedia: true
