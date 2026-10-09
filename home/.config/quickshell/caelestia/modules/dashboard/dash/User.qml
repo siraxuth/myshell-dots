@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import Caelestia.Config
 import qs.components
@@ -7,186 +9,213 @@ import qs.components.images
 import qs.services
 import qs.utils
 
-Row {
+Item {
     id: root
 
     required property DrawerVisibilities visibilities
     required property FileDialog facePicker
 
-    padding: Tokens.padding.large
-    spacing: Tokens.spacing.normal
+    property color pfpFallbackColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
+
+    implicitWidth: Tokens.sizes.dashboard.infoWidth + 220
+    implicitHeight: 124
+
+    Behavior on pfpFallbackColour {
+        CAnim {}
+    }
+
+    MaterialShape {
+        id: logoShape
+        x: Tokens.padding.small
+        anchors.verticalCenter: parent.verticalCenter
+        implicitSize: Tokens.font.size.extraLarge * 2.5
+        shape: MaterialShape.Gem
+        color: Colours.palette.m3primaryContainer
+
+        Behavior on color { CAnim {} }
+
+        Loader {
+            anchors.centerIn: parent
+            sourceComponent: SysInfo.isDefaultLogo ? caelestiaLogo : osLogo
+        }
+    }
+
+    Component {
+        id: osLogo
+
+        ColouredIcon {
+            source: SysInfo.osLogo
+            implicitSize: Tokens.font.size.extraLarge * 1.8
+            colour: Colours.palette.m3onPrimaryContainer
+        }
+    }
+
+    Component {
+        id: caelestiaLogo
+
+        Logo {
+            implicitWidth: Tokens.font.size.extraLarge * 1.8
+            implicitHeight: Tokens.font.size.extraLarge * 1.3
+            topColour: Colours.palette.m3primary
+            bottomColour: Colours.palette.m3onPrimaryContainer
+        }
+    }
 
     StyledClippingRect {
-        implicitWidth: info.implicitHeight
-        implicitHeight: info.implicitHeight
+        id: pfpContainer
 
-        radius: Tokens.rounding.large
-        color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+        anchors.left: logoShape.right
+        anchors.leftMargin: -Tokens.padding.normal
+        anchors.verticalCenter: parent.verticalCenter
+        implicitWidth: 116
+        implicitHeight: 116
+        radius: Math.min(width, height) / 2
+        color: root.pfpFallbackColour
 
-        MaterialIcon {
+        Loader {
             anchors.centerIn: parent
-
-            text: "person"
-            fill: 1
-            grade: 200
-            font.pointSize: Math.floor(info.implicitHeight / 2) || 1
-            visible: pfp.status !== Image.Ready
+            asynchronous: true
+            active: pfp.status !== Image.Ready
+            sourceComponent: MaterialIcon {
+                text: "person_add"
+                color: Colours.palette.m3onSurfaceVariant
+                font.pointSize: Tokens.font.size.extraLarge
+                fill: 1
+                grade: -2
+            }
         }
 
         CachingImage {
             id: pfp
-
             anchors.fill: parent
             path: `${Paths.home}/.face`
         }
 
-        MouseArea {
+        StyledRect {
             anchors.fill: parent
-            hoverEnabled: true
-
-            StyledRect {
-                anchors.fill: parent
-
-                color: Qt.alpha(Colours.palette.m3scrim, 0.5)
-                opacity: parent.containsMouse ? 1 : 0
-
-                Behavior on opacity {
-                    Anim {
-                        duration: Tokens.anim.durations.expressiveFastSpatial
-                    }
-                }
+            color: Qt.alpha(Colours.palette.m3scrim, pfp.status === Image.Ready ? 0.42 : 0)
+            opacity: pfpMouse.containsMouse ? 1 : 0
+            Behavior on opacity {
+                Anim { type: Anim.DefaultEffects }
             }
 
-            StyledRect {
+            MaterialShape {
                 anchors.centerIn: parent
-
-                implicitWidth: selectIcon.implicitHeight + Tokens.padding.small * 2
-                implicitHeight: selectIcon.implicitHeight + Tokens.padding.small * 2
-
-                radius: Tokens.rounding.normal
+                implicitSize: parent.height * 0.66
+                shape: MaterialShape.Diamond
                 color: Colours.palette.m3primary
-                scale: parent.containsMouse ? 1 : 0.5
-                opacity: parent.containsMouse ? 1 : 0
+                scale: pfpMouse.pressed ? 0.9 : pfpMouse.containsMouse ? 1 : 0.7
 
-                StateLayer {
-                    color: Colours.palette.m3onPrimary
-                    onClicked: {
-                        root.visibilities.launcher = false;
-                        root.facePicker.open();
-                    }
-                }
+                Behavior on color { CAnim {} }
+                Behavior on scale { Anim { type: Anim.FastSpatial } }
 
                 MaterialIcon {
-                    id: selectIcon
-
                     anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: -font.pointSize * 0.02
-
-                    text: "frame_person"
+                    text: "person_edit"
                     color: Colours.palette.m3onPrimary
-                    font.pointSize: Tokens.font.size.extraLarge
+                    font.pointSize: Tokens.font.size.large
                 }
+            }
+        }
 
-                Behavior on scale {
-                    Anim {
-                        type: Anim.FastSpatial
-                    }
-                }
-
-                Behavior on opacity {
-                    Anim {
-                        duration: Tokens.anim.durations.expressiveFastSpatial
-                    }
-                }
+        MouseArea {
+            id: pfpMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                root.visibilities.dashboard = false;
+                root.facePicker.open();
             }
         }
     }
 
-    Column {
-        id: info
+    MaterialShape {
+        id: uptimeShape
+        anchors.left: pfpContainer.right
+        anchors.leftMargin: -Tokens.padding.large
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Tokens.padding.small
+        implicitSize: Tokens.font.size.large * 2.2
+        shape: MaterialShape.Pill
+        color: Colours.palette.m3tertiaryContainer
 
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: Tokens.spacing.normal
+        Behavior on color { CAnim {} }
 
-        Item {
-            id: line
+        MaterialIcon {
+            anchors.centerIn: parent
+            text: "clock_arrow_up"
+            color: Colours.palette.m3onTertiaryContainer
+            font.pointSize: Tokens.font.size.large
+        }
+    }
 
-            implicitWidth: icon.implicitWidth + text.width + text.anchors.leftMargin
-            implicitHeight: Math.max(icon.implicitHeight, text.implicitHeight)
+    StyledText {
+        id: uptimeText
+        anchors.left: uptimeShape.right
+        anchors.leftMargin: Tokens.spacing.small
+        anchors.verticalCenter: uptimeShape.verticalCenter
+        width: Math.max(0, parent.width - x - Tokens.padding.large)
+        text: qsTr("Up %1").arg(SysInfo.uptime)
+        elide: Text.ElideRight
+    }
 
-            ColouredIcon {
-                id: icon
+    StyledRect {
+        id: bubble1
+        anchors.left: pfpContainer.right
+        anchors.top: bubble2.bottom
+        anchors.leftMargin: Tokens.spacing.small
+        anchors.topMargin: -Tokens.spacing.extraSmall
+        implicitWidth: 10
+        implicitHeight: 10
+        radius: Tokens.rounding.full
+        color: Colours.palette.m3secondaryContainer
+    }
 
-                anchors.left: parent.left
-                anchors.leftMargin: (Tokens.sizes.dashboard.infoIconSize - implicitWidth) / 2
+    StyledRect {
+        id: bubble2
+        anchors.left: bubble1.right
+        anchors.verticalCenter: wmContainer.bottom
+        anchors.leftMargin: Tokens.spacing.extraSmall
+        implicitWidth: 15
+        implicitHeight: 15
+        radius: Tokens.rounding.full
+        color: Colours.palette.m3secondaryContainer
+    }
 
-                source: SysInfo.osLogo
-                implicitSize: Math.floor(Tokens.font.size.normal * 1.34)
-                colour: Colours.palette.m3primary
+    StyledRect {
+        id: wmContainer
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.rightMargin: Tokens.padding.large
+        anchors.topMargin: Tokens.padding.small
+        radius: Tokens.rounding.largeIncreased
+        color: Colours.palette.m3secondaryContainer
+        implicitWidth: wmLabel.implicitWidth + Tokens.padding.normal * 2
+        implicitHeight: wmLabel.implicitHeight + Tokens.padding.small * 2
+
+        Row {
+            id: wmLabel
+            anchors.centerIn: parent
+            spacing: Tokens.spacing.extraSmall
+
+            MaterialIcon {
+                id: wmIcon
+                anchors.verticalCenter: parent.verticalCenter
+                text: "select_window"
+                color: Colours.palette.m3onSecondaryContainer
+                font.pointSize: Tokens.font.size.small
             }
 
             StyledText {
-                id: text
-
-                anchors.verticalCenter: icon.verticalCenter
-                anchors.left: icon.right
-                anchors.leftMargin: icon.anchors.leftMargin
-                text: `:  ${SysInfo.osPrettyName || SysInfo.osName}`
-                font.pointSize: Tokens.font.size.normal
-
-                width: Tokens.sizes.dashboard.infoWidth
+                id: wmText
+                anchors.verticalCenter: parent.verticalCenter
+                text: SysInfo.wm || qsTr("Wayland")
+                color: Colours.palette.m3onSecondaryContainer
+                font.pointSize: Tokens.font.size.small
+                width: Math.min(implicitWidth, root.width - wmContainer.x - Tokens.padding.large - wmIcon.width - wmLabel.spacing - Tokens.padding.normal * 2)
                 elide: Text.ElideRight
             }
-        }
-
-        InfoLine {
-            icon: "select_window_2"
-            text: SysInfo.wm
-            colour: Colours.palette.m3secondary
-        }
-
-        InfoLine {
-            id: uptime
-
-            icon: "timer"
-            text: qsTr("up %1").arg(SysInfo.uptime)
-            colour: Colours.palette.m3tertiary
-        }
-    }
-
-    component InfoLine: Item {
-        id: line
-
-        required property string icon
-        required property string text
-        required property color colour
-
-        implicitWidth: icon.implicitWidth + text.width + text.anchors.leftMargin
-        implicitHeight: Math.max(icon.implicitHeight, text.implicitHeight)
-
-        MaterialIcon {
-            id: icon
-
-            anchors.left: parent.left
-            anchors.leftMargin: (Tokens.sizes.dashboard.infoIconSize - implicitWidth) / 2
-
-            fill: 1
-            text: line.icon
-            color: line.colour
-            font.pointSize: Tokens.font.size.normal
-        }
-
-        StyledText {
-            id: text
-
-            anchors.verticalCenter: icon.verticalCenter
-            anchors.left: icon.right
-            anchors.leftMargin: icon.anchors.leftMargin
-            text: `:  ${line.text}`
-            font.pointSize: Tokens.font.size.normal
-
-            width: Tokens.sizes.dashboard.infoWidth
-            elide: Text.ElideRight
         }
     }
 }
