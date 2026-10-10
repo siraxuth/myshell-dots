@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "${1:-}" in
+    instagram)
+        app_url=https://www.instagram.com/
+        ;;
+    facebook)
+        app_url=https://www.facebook.com/
+        ;;
+    *)
+        printf 'Usage: %s {instagram|facebook}\n' "$0" >&2
+        exit 2
+        ;;
+esac
+
+exec /opt/brave-bin/brave \
+    --profile-directory=Default \
+    --app="$app_url"

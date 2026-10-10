@@ -16,7 +16,6 @@ Singleton {
     property real masterVolume: 0.75
     property bool chargePending: false
     property bool confirmPending: false
-    property bool notificationPending: false
 
     function sourceFor(soundId: string): url {
         const path = String(soundId || "").trim();
@@ -46,15 +45,6 @@ Singleton {
         }
     }
 
-    SoundEffect {
-        id: notificationSound
-        loops: 1
-        onStatusChanged: if (status === SoundEffect.Ready && root.notificationPending) {
-            root.notificationPending = false;
-            play();
-        }
-    }
-
     function notificationSource(): url {
         const soundId = Config.notifs.soundId === "crisp" ? "crisp" : "soft";
         return sourceFor(`sounds/notification-${soundId}.wav`);
@@ -64,14 +54,12 @@ Singleton {
         if (!enabled || !Config.notifs.soundEnabled)
             return;
 
-        notificationPending = true;
-        notificationSound.source = notificationSource();
-        notificationSound.volume = Math.max(0, Math.min(1, Config.notifs.soundVolume));
-        notificationSound.stop();
-        if (notificationSound.status === SoundEffect.Ready) {
-            notificationPending = false;
-            notificationSound.play();
-        }
+        const volume = Math.max(0, Math.min(1, Config.notifs.soundVolume));
+        Quickshell.execDetached([
+            "pw-play",
+            `--volume=${volume}`,
+            `${Quickshell.shellDir}/assets/sounds/notification-${Config.notifs.soundId === "crisp" ? "crisp" : "soft"}.wav`
+        ]);
     }
 
     function previewNotification(): void {
