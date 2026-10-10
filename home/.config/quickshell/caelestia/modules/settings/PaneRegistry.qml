@@ -28,6 +28,13 @@ QtObject {
             readonly property string component: "audio/AudioPane.qml"
         },
         QtObject {
+            readonly property string id: "terminal"
+            readonly property string label: "terminal"
+            readonly property string description: qsTr("Foot blur and opacity")
+            readonly property string icon: "terminal"
+            readonly property string component: "terminal/TerminalPane.qml"
+        },
+        QtObject {
             readonly property string id: "appearance"
             readonly property string label: "appearance"
             readonly property string description: qsTr("Themes and colors")
@@ -103,7 +110,7 @@ QtObject {
         },
         QtObject {
             readonly property string name: qsTr("System")
-            readonly property list<string> paneIds: ["audio", "display", "storage", "notifications", "power"]
+            readonly property list<string> paneIds: ["audio", "terminal", "display", "storage", "notifications", "power"]
         }
     ]
 
