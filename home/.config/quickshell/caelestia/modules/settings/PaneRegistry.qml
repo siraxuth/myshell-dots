@@ -14,6 +14,13 @@ QtObject {
             readonly property string component: "network/NetworkingPane.qml"
         },
         QtObject {
+            readonly property string id: "widgets"
+            readonly property string label: "widgets"
+            readonly property string description: qsTr("Manage desktop widgets")
+            readonly property string icon: "widgets"
+            readonly property string component: "widgets/WidgetsPane.qml"
+        },
+        QtObject {
             readonly property string id: "bluetooth"
             readonly property string label: "bluetooth"
             readonly property string description: qsTr("Bluetooth devices")
@@ -77,6 +84,20 @@ QtObject {
             readonly property string component: "display/DisplayPane.qml"
         },
         QtObject {
+            readonly property string id: "input"
+            readonly property string label: "input"
+            readonly property string description: qsTr("Mouse and pointer speed")
+            readonly property string icon: "mouse"
+            readonly property string component: "input/InputPane.qml"
+        },
+        QtObject {
+            readonly property string id: "events"
+            readonly property string label: "events"
+            readonly property string description: qsTr("Calendar and reminders")
+            readonly property string icon: "event"
+            readonly property string component: "events/EventsPane.qml"
+        },
+        QtObject {
             readonly property string id: "storage"
             readonly property string label: "storage"
             readonly property string description: qsTr("Disk usage and cleanup")
@@ -89,13 +110,6 @@ QtObject {
             readonly property string description: qsTr("Battery and idle")
             readonly property string icon: "bolt"
             readonly property string component: "power/PowerPane.qml"
-        },
-        QtObject {
-            readonly property string id: "widgets"
-            readonly property string label: "widgets"
-            readonly property string description: qsTr("Manage desktop widgets")
-            readonly property string icon: "widgets"
-            readonly property string component: "widgets/WidgetsPane.qml"
         }
     ]
 
@@ -106,11 +120,11 @@ QtObject {
         },
         QtObject {
             readonly property string name: qsTr("Personalization")
-            readonly property list<string> paneIds: ["appearance", "taskbar", "launcher", "dashboard", "widgets"]
+            readonly property list<string> paneIds: ["widgets", "appearance", "taskbar", "launcher", "dashboard"]
         },
         QtObject {
             readonly property string name: qsTr("System")
-            readonly property list<string> paneIds: ["audio", "terminal", "display", "storage", "notifications", "power"]
+            readonly property list<string> paneIds: ["audio", "terminal", "display", "input", "events", "storage", "notifications", "power"]
         }
     ]
 

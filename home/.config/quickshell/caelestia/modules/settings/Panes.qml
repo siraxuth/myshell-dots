@@ -9,6 +9,8 @@ import "notifications"
 import "launcher"
 import "dashboard"
 import "display"
+import "input"
+import "events"
 import "power"
 import "storage"
 import "widgets"
@@ -58,14 +60,22 @@ ClippingRectangle {
         height: implicitHeight
         property bool animationComplete: true
         property bool initialOpeningComplete: false
+        property bool waitingForPane: false
+        property int previousIndex: 0
+        property int currentIndex: 0
 
-        y: -root.session.activeIndex * root.height
+        Component.onCompleted: {
+            previousIndex = root.session.activeIndex;
+            currentIndex = root.session.activeIndex;
+        }
+
+        y: -(waitingForPane ? previousIndex : root.session.activeIndex) * root.height
         clip: true
 
         Timer {
             id: animationDelayTimer
 
-            interval: Tokens.anim.durations.normal
+            interval: Tokens.anim.durations.small
             onTriggered: {
                 layout.animationComplete = true;
             }
@@ -74,7 +84,7 @@ ClippingRectangle {
         Timer {
             id: initialOpeningTimer
 
-            interval: Tokens.anim.durations.large
+            interval: Tokens.anim.durations.small
             running: true
             onTriggered: {
                 layout.initialOpeningComplete = true;
@@ -82,6 +92,8 @@ ClippingRectangle {
         }
 
         Repeater {
+            id: paneRepeater
+
             model: PaneRegistry.count
 
             Pane {
@@ -96,13 +108,34 @@ ClippingRectangle {
         }
 
         Behavior on y {
-            Anim {}
+            Anim {
+                type: Anim.StandardSmall
+            }
         }
 
         Connections {
             function onActiveIndexChanged(): void {
+                const canWaitForPane = layout.animationComplete;
                 layout.animationComplete = false;
-                animationDelayTimer.restart();
+                if (!layout.waitingForPane) {
+                    if (canWaitForPane)
+                        layout.previousIndex = layout.currentIndex;
+                    layout.waitingForPane = canWaitForPane;
+                }
+                layout.currentIndex = root.session.activeIndex;
+                animationDelayTimer.stop();
+
+                if (layout.waitingForPane) {
+                    Qt.callLater(() => {
+                        const targetPane = paneRepeater.itemAt(layout.currentIndex);
+                        if (!targetPane || targetPane.loaded) {
+                            layout.waitingForPane = false;
+                            animationDelayTimer.restart();
+                        }
+                    });
+                } else {
+                    animationDelayTimer.restart();
+                }
             }
 
             target: root.session
@@ -114,27 +147,18 @@ ClippingRectangle {
 
         required property int paneIndex
         required property string componentPath
-        property bool hasBeenLoaded: false
         readonly property string paneId: PaneRegistry.getByIndex(pane.paneIndex).id
+        readonly property bool loaded: loader.item !== null
 
         function updateActive(): void {
             const diff = Math.abs(root.session.activeIndex - pane.paneIndex);
-            const isActivePane = diff === 0;
-            let shouldBeActive = false;
+            const isTransitioningFrom = !layout.animationComplete
+                && pane.paneIndex === layout.previousIndex;
 
-            if (!layout.initialOpeningComplete) {
-                shouldBeActive = isActivePane;
-            } else {
-                if (diff <= 1) {
-                    shouldBeActive = true;
-                } else if (pane.hasBeenLoaded) {
-                    shouldBeActive = true;
-                } else {
-                    shouldBeActive = layout.animationComplete;
-                }
-            }
-
-            loader.active = shouldBeActive;
+            // Keep only the visible pane, its immediate neighbors, and the
+            // outgoing pane during a transition. Previously every visited
+            // pane stayed alive, so its bindings and live data kept updating.
+            loader.active = diff <= 1 || isTransitioningFrom;
         }
 
         implicitWidth: root.width
@@ -153,10 +177,6 @@ ClippingRectangle {
             }
 
             onActiveChanged: {
-                if (active && !pane.hasBeenLoaded) {
-                    pane.hasBeenLoaded = true;
-                }
-
                 if (active && !item) {
                     loader.setSource(pane.componentPath, {
                         "session": root.session
@@ -165,10 +185,20 @@ ClippingRectangle {
             }
 
             onItemChanged: {
-                if (item) {
-                    pane.hasBeenLoaded = true;
+                if (item && layout.waitingForPane && pane.paneIndex === layout.currentIndex) {
+                    layout.waitingForPane = false;
+                    animationDelayTimer.restart();
                 }
             }
+
+            onStatusChanged: {
+                if (status === Loader.Error && layout.waitingForPane
+                        && pane.paneIndex === layout.currentIndex) {
+                    layout.waitingForPane = false;
+                    animationDelayTimer.restart();
+                }
+            }
+
         }
 
         Connections {

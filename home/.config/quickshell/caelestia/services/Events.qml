@@ -195,7 +195,6 @@ Singleton {
         const key = formatDateKey(dateKey);
         if (!key)
             return [];
-        ensureLoaded();
         return root.rangeIndex[key] ?? [];
     }
 
@@ -203,12 +202,10 @@ Singleton {
         const key = formatDateKey(dateKey);
         if (!key)
             return false;
-        ensureLoaded();
         return (root.rangeIndex[key]?.length ?? 0) > 0;
     }
 
     function getRangesForMonth(year: int, month: int): var {
-        ensureLoaded();
         const ranges = [];
         const data = root.eventsData;
         const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;

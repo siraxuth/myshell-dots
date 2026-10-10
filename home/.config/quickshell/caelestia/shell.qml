@@ -10,11 +10,13 @@ import "modules/background"
 import "modules/drawers"
 import "modules/emoji"
 import "modules/lock"
+import "modules/taskmanager"
 import "modules/widgets"
 import qs.services
 
 ShellRoot {
     readonly property var eventsService: Events
+    readonly property var pointerPrefs: PointerPrefs
 
     settings.watchFiles: false
 
@@ -25,6 +27,9 @@ ShellRoot {
     }
 
     WidgetEditor {
+    }
+
+    TaskManager {
     }
 
     Drawers {
