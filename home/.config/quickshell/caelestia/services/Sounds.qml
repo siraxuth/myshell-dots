@@ -45,11 +45,6 @@ Singleton {
         }
     }
 
-    function notificationSource(): url {
-        const soundId = Config.notifs.soundId === "crisp" ? "crisp" : "soft";
-        return sourceFor(`sounds/notification-${soundId}.wav`);
-    }
-
     function playNotification(): void {
         if (!enabled || !Config.notifs.soundEnabled)
             return;
