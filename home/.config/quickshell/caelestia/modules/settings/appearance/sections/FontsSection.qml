@@ -34,6 +34,10 @@ CollapsibleSection {
 
             sourceComponent: StyledListView {
                 id: sansFontList
+                SettingsScrollHandler {
+                    flickable: sansFontList
+                }
+
 
                 property alias contentHeight: sansFontList.contentHeight
 
@@ -41,7 +45,7 @@ CollapsibleSection {
                 spacing: Tokens.spacing.small / 2
                 model: Qt.fontFamilies()
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: sansFontList
                 }
 
@@ -115,6 +119,10 @@ CollapsibleSection {
 
             sourceComponent: StyledListView {
                 id: monoFontList
+                SettingsScrollHandler {
+                    flickable: monoFontList
+                }
+
 
                 property alias contentHeight: monoFontList.contentHeight
 
@@ -122,7 +130,7 @@ CollapsibleSection {
                 spacing: Tokens.spacing.small / 2
                 model: Qt.fontFamilies()
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: monoFontList
                 }
 
@@ -198,6 +206,10 @@ CollapsibleSection {
 
             sourceComponent: StyledListView {
                 id: materialFontList
+                SettingsScrollHandler {
+                    flickable: materialFontList
+                }
+
 
                 property alias contentHeight: materialFontList.contentHeight
 
@@ -205,7 +217,7 @@ CollapsibleSection {
                 spacing: Tokens.spacing.small / 2
                 model: Qt.fontFamilies().filter(f => f.startsWith("Material Symbols"))
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: materialFontList
                 }
 
