@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import qs.modules.settings.components
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -73,6 +74,10 @@ Item {
 
         Flickable {
             id: flick
+            SettingsScrollHandler {
+                flickable: flick
+            }
+
 
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -83,22 +88,7 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
 
-        // Keep wheel events in the navigation rail so the adjacent pane cannot
-        // interpret them as a page change or scroll gesture.
-        MouseArea {
-            anchors.fill: parent
-            z: 10
-            acceptedButtons: Qt.NoButton
-            preventStealing: true
-
-            onWheel: event => {
-                const delta = event.pixelDelta.y !== 0 ? event.pixelDelta.y : event.angleDelta.y / 120 * 64;
-                flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, flick.contentY - delta));
-                event.accepted = true;
-            }
-        }
-
-        StyledScrollBar.vertical: StyledScrollBar {
+        SettingsScrollBar.vertical: SettingsScrollBar {
             flickable: flick
         }
 
@@ -191,6 +181,7 @@ Item {
         required property bool firstInGroup
         required property bool lastInGroup
         readonly property bool active: root.session.active === pane.label
+        readonly property bool highlighted: active || stateLayer.containsMouse || stateLayer.pressed
 
         implicitWidth: contentRow.implicitWidth + Tokens.padding.large * 2
         implicitHeight: contentRow.implicitHeight + Tokens.padding.large * 2
@@ -199,11 +190,11 @@ Item {
             id: background
 
             anchors.fill: parent
-            topLeftRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.firstInGroup ? Tokens.rounding.large : 0
-            topRightRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.firstInGroup ? Tokens.rounding.large : 0
-            bottomLeftRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.lastInGroup ? Tokens.rounding.large : 0
-            bottomRightRadius: stateLayer.pressed || stateLayer.containsMouse ? Tokens.rounding.normal : item.active || item.lastInGroup ? Tokens.rounding.large : 0
-            color: item.active ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
+            topLeftRadius: item.highlighted && item.firstInGroup ? Tokens.rounding.large : 0
+            topRightRadius: item.highlighted && item.firstInGroup ? Tokens.rounding.large : 0
+            bottomLeftRadius: item.highlighted && item.lastInGroup ? Tokens.rounding.large : 0
+            bottomRightRadius: item.highlighted && item.lastInGroup ? Tokens.rounding.large : 0
+            color: item.active ? Colours.palette.m3secondaryContainer : item.highlighted ? Colours.layer(Colours.palette.m3surfaceContainerHigh, 2) : "transparent"
 
             Behavior on topLeftRadius { Anim { type: Anim.StandardSmall } }
             Behavior on topRightRadius { Anim { type: Anim.StandardSmall } }

@@ -4,6 +4,12 @@ import qs.services
 StyledText {
     property real fill
     property int grade: Colours.light ? 0 : -25
+    property var fontStyle
+
+    onFontStyleChanged: {
+        if (fontStyle)
+            font = fontStyle;
+    }
 
     font.family: Tokens.font.family.material
     font.pointSize: Tokens.font.size.larger

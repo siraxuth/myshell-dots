@@ -6,7 +6,7 @@ import Caelestia.Config
 import qs.components
 import qs.services
 
-TextField {
+TypingTextField {
     id: root
 
     color: Colours.palette.m3onSurface

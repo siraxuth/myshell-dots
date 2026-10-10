@@ -44,11 +44,11 @@ MouseArea {
     onClicked: expanded = false
 
     opacity: expanded ? 1 : 0
-    layer.enabled: opacity < 1
 
     Behavior on opacity {
         Anim {
             duration: Tokens.anim.durations.small
+            easing: Tokens.anim.standardDecel
         }
     }
 
@@ -86,12 +86,12 @@ MouseArea {
         implicitHeight: column.implicitHeight + column.anchors.margins * 2
 
         transform: Scale {
-            yScale: root.expanded ? 1 : 0.1
+            yScale: root.expanded ? 1 : 0.92
             origin.y: root.thisSideY === Menu.Bottom ? menu.height : 0
 
             Behavior on yScale {
                 Anim {
-                    type: Anim.DefaultSpatial
+                    type: Anim.StandardSmall
                 }
             }
         }
@@ -119,6 +119,7 @@ MouseArea {
                         required property int index
                         required property MenuItem modelData
                         readonly property bool active: modelData === root.active
+                        property bool revealed: false
 
                         Layout.fillWidth: true
                         implicitWidth: menuOptionRow.implicitWidth + Tokens.padding.normal * 2
@@ -131,6 +132,54 @@ MouseArea {
                         bottomRightRadius: index === repeater.count - 1 ? Tokens.rounding.small : radius
 
                         color: Qt.alpha(Colours.palette.m3tertiaryContainer, active ? 1 : 0)
+                        opacity: revealed ? 1 : 0
+
+                        Component.onCompleted: {
+                            if (root.expanded)
+                                revealTimer.start();
+                        }
+
+                        Connections {
+                            target: root
+
+                            function onExpandedChanged(): void {
+                                revealTimer.stop();
+                                item.revealed = false;
+                                if (root.expanded)
+                                    revealTimer.start();
+                            }
+                        }
+
+                        Timer {
+                            id: revealTimer
+
+                            interval: Math.min(item.index * 14, 140)
+                            onTriggered: item.revealed = root.expanded
+                        }
+
+                        Behavior on opacity {
+                            NumberAnimation {
+                                duration: Tokens.anim.durations.small
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        transform: Translate {
+                            y: item.revealed ? 0 : 7
+
+                            Behavior on y {
+                                NumberAnimation {
+                                    duration: Tokens.anim.durations.small
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+
+                        Behavior on color {
+                            CAnim {
+                                duration: Tokens.anim.durations.small
+                            }
+                        }
 
                         Behavior on radius {
                             Anim {}
@@ -143,7 +192,7 @@ MouseArea {
                             bottomRightRadius: parent.bottomRightRadius
 
                             color: item.active ? Colours.palette.m3onTertiaryContainer : Colours.palette.m3onSurface
-                            disabled: !root.expanded
+                            disabled: !root.expanded || !item.revealed
                             onClicked: {
                                 root.itemSelected(item.modelData);
                                 root.active = item.modelData;

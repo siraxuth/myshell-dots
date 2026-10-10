@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
+import qs.components.controls
 import qs.services
 
 Variants {
@@ -186,7 +187,7 @@ Variants {
                             color: Colours.palette.m3onSurfaceVariant
                         }
 
-                        TextInput {
+                        TypingTextInput {
                             id: search
 
                             anchors.left: searchIcon.right

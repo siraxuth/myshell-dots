@@ -363,7 +363,7 @@ StyledRect {
                     }
                 }
 
-                TextInput {
+                TypingTextInput {
                     id: offsetInput
 
                     horizontalAlignment: TextInput.AlignHCenter
