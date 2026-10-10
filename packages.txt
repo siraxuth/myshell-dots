@@ -29,6 +29,7 @@ grim                  # screenshots (also used for the live-wallpaper picker wor
 brightnessctl
 ddcutil               # external monitor brightness
 libqalculate          # launcher calculator action
+fd                    # fast filename search in the launcher
 cliphist              # clipboard history
 playerctl             # MPRIS control + used by the `lyrics` terminal karaoke tool
 toilet                # big block font for `lyrics` (Latin only; Thai falls back to large text)

@@ -22,7 +22,7 @@ StyledListView {
         onValuesChanged: root.currentIndex = 0
     }
 
-    spacing: Tokens.spacing.small
+    spacing: 4
     orientation: Qt.Vertical
     implicitHeight: (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
 

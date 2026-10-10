@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -55,8 +56,8 @@ Item {
     Item {
         id: listWrapper
 
-        implicitWidth: Math.max(list.width, wallpaperButtonsRow.visible ? wallpaperButtonsRow.implicitWidth : 0)
-        implicitHeight: list.height + root.padding + (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + Tokens.spacing.normal + wallpaperButtonsRow.implicitHeight + Tokens.spacing.small : 0)
+        implicitWidth: Math.max(list.width, tabs.visible ? tabs.implicitWidth : 0, wallpaperButtonsRow.visible ? wallpaperButtonsRow.implicitWidth : 0)
+        implicitHeight: list.implicitHeight + root.padding + (tabs.visible ? tabs.implicitHeight + Tokens.spacing.small : 0) + (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + Tokens.spacing.normal + wallpaperButtonsRow.implicitHeight + Tokens.spacing.small : 0)
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: searchWrapper.top
@@ -69,10 +70,62 @@ Item {
             content: root
             visibilities: root.visibilities
             panels: root.panels
-            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3 - (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + wallpaperButtonsRow.implicitHeight + Tokens.spacing.normal + Tokens.spacing.small : 0)
+            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3 - (tabs.visible ? tabs.implicitHeight + Tokens.spacing.small : 0) - (wallpaperButtonsRow.visible ? colorFilterBar.implicitHeight + wallpaperButtonsRow.implicitHeight + Tokens.spacing.normal + Tokens.spacing.small : 0)
             search: search
             padding: root.padding
             rounding: root.rounding
+        }
+
+        StyledRect {
+            id: tabs
+
+            visible: !list.showWallpapers
+            anchors.top: parent.top
+            anchors.topMargin: root.padding
+            anchors.left: parent.left
+            anchors.right: parent.right
+            implicitWidth: tabRow.implicitWidth
+            implicitHeight: tabRow.implicitHeight
+            radius: Tokens.rounding.normal
+            color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+            clip: true
+
+            RowLayout {
+                id: tabRow
+
+                anchors.fill: parent
+                spacing: 0
+
+                IconTextButton {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 0
+                    topLeftRadius: implicitHeight / 2
+                    bottomLeftRadius: implicitHeight / 2
+                    stateLayer.topLeftRadius: implicitHeight / 2
+                    stateLayer.bottomLeftRadius: implicitHeight / 2
+                    icon: "apps"
+                    text: qsTr("Applications")
+                    toggle: true
+                    checked: list.activeTab === "apps"
+                    onClicked: list.activeTab = "apps"
+                }
+
+                IconTextButton {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    radius: 0
+                    topRightRadius: implicitHeight / 2
+                    bottomRightRadius: implicitHeight / 2
+                    stateLayer.topRightRadius: implicitHeight / 2
+                    stateLayer.bottomRightRadius: implicitHeight / 2
+                    icon: "folder_open"
+                    text: qsTr("Files")
+                    toggle: true
+                    checked: list.activeTab === "files"
+                    onClicked: list.activeTab = "files"
+                }
+            }
         }
 
         ColorFilterBar {
@@ -166,12 +219,15 @@ Item {
             topPadding: Tokens.padding.larger
             bottomPadding: Tokens.padding.larger
 
-            placeholderText: qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
+            placeholderText: list.showFiles ? qsTr("Search files and folders…") : qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
             onAccepted: {
                 const currentItem = list.currentList?.currentItem;
                 if (currentItem) {
-                    if (list.showWallpapers) {
+                    if (list.showFiles) {
+                        Files.open(currentItem.modelData);
+                        root.visibilities.launcher = false;
+                    } else if (list.showWallpapers) {
                         if (Colours.scheme === "dynamic" && currentItem.modelData.path !== Wallpapers.actualCurrent)
                             Wallpapers.previewColourLock = true;
                         Wallpapers.setWallpaper(currentItem.modelData.path);

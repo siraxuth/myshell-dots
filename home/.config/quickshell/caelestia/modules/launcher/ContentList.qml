@@ -6,6 +6,7 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.utils
+import qs.modules.launcher.services
 
 Item {
     id: root
@@ -18,14 +19,17 @@ Item {
     required property int padding
     required property int rounding
 
-    readonly property bool showWallpapers: search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
-    readonly property var currentList: showWallpapers ? wallpaperList.item : appList.item // Can be either ListView or PathView, so can't type properly
+    property string activeTab: "apps"
+
+    readonly property bool showWallpapers: activeTab === "apps" && search.text.startsWith(`${GlobalConfig.launcher.actionPrefix}wallpaper `)
+    readonly property bool showFiles: activeTab === "files" && !showWallpapers
+    readonly property var currentList: showWallpapers ? wallpaperList.item : (showFiles ? fileList.item : appList.item) // Can be either ListView or PathView, so can't type properly
 
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
 
     clip: true
-    state: showWallpapers ? "wallpapers" : "apps"
+    state: showWallpapers ? "wallpapers" : (showFiles ? "files" : "apps")
 
     states: [
         State {
@@ -35,6 +39,20 @@ Item {
                 root.implicitWidth: root.Tokens.sizes.launcher.itemWidth
                 root.implicitHeight: Math.min(root.maxHeight, appList.implicitHeight > 0 ? appList.implicitHeight : empty.implicitHeight)
                 appList.active: true
+            }
+
+            AnchorChanges {
+                anchors.left: root.parent.left
+                anchors.right: root.parent.right
+            }
+        },
+        State {
+            name: "files"
+
+            PropertyChanges {
+                root.implicitWidth: root.Tokens.sizes.launcher.itemWidth
+                root.implicitHeight: Math.min(root.maxHeight, fileList.implicitHeight > 0 ? fileList.implicitHeight : empty.implicitHeight)
+                fileList.active: true
             }
 
             AnchorChanges {
@@ -104,6 +122,20 @@ Item {
         }
     }
 
+    Loader {
+        id: fileList
+
+        active: false
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+
+        sourceComponent: FileList {
+            search: root.search
+            visibilities: root.visibilities
+        }
+    }
+
     Row {
         id: empty
 
@@ -117,7 +149,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
 
         MaterialIcon {
-            text: root.state === "wallpapers" ? "wallpaper_slideshow" : "manage_search"
+            text: root.state === "wallpapers" ? "wallpaper_slideshow" : (root.showFiles ? "folder_search" : "manage_search")
             color: Colours.palette.m3onSurfaceVariant
             font.pointSize: Tokens.font.size.extraLarge
 
@@ -128,14 +160,14 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
 
             StyledText {
-                text: root.state === "wallpapers" ? qsTr("No wallpapers found") : qsTr("No results")
+                text: root.state === "wallpapers" ? qsTr("No wallpapers found") : (root.showFiles ? (Files.searching ? qsTr("Searching files…") : qsTr("No files found")) : qsTr("No results"))
                 color: Colours.palette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.larger
                 font.weight: 500
             }
 
             StyledText {
-                text: root.state === "wallpapers" && Wallpapers.list.length === 0 ? qsTr("Try putting some wallpapers in %1").arg(Paths.shortenHome(Paths.wallsdir)) : qsTr("Try searching for something else")
+                text: root.state === "wallpapers" && Wallpapers.list.length === 0 ? qsTr("Try putting some wallpapers in %1").arg(Paths.shortenHome(Paths.wallsdir)) : (root.showFiles ? (Files.error || (!root.search.text.trim() ? qsTr("Type to search files and folders") : qsTr("Try another name or path"))) : qsTr("Try searching for something else"))
                 color: Colours.palette.m3onSurfaceVariant
                 font.pointSize: Tokens.font.size.normal
             }
