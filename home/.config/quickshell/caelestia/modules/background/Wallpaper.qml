@@ -244,7 +244,7 @@ Item {
                 smooth: true
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500))
+                        duration: Wallpapers.animsEnabled ? Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500)) : 1
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -260,7 +260,7 @@ Item {
                 id: animVid
                 target: vidRoot
                 property: "opacity"
-                duration: Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500))
+                duration: Wallpapers.animsEnabled ? Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500)) : 1
                 from: 0
                 to: 1
                 easing.type: Easing.InOutCubic
@@ -268,7 +268,7 @@ Item {
 
             Timer {
                 running: root.current !== vidRoot && root.current?.isReady
-                interval: Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500))
+                interval: Wallpapers.animsEnabled ? Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500)) : 1
                 onTriggered: {
                     player.stop();
                     player.source = "";
@@ -333,12 +333,13 @@ Item {
                 Anim {
                     target: img
                     properties: "opacity,scale"
+                    duration: Wallpapers.animsEnabled ? Tokens.anim.durations.normal : 1
                 }
             }
 
             Timer {
                 running: root.current !== img && root.current?.isReady
-                interval: Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500))
+                interval: Wallpapers.animsEnabled ? Math.max(1, Math.min(2000, Wallpapers.animationDuration || 500)) : 1
                 onTriggered: {
                     img.source = "";
                     img.destroy();

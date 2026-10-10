@@ -33,31 +33,38 @@ StyledRect {
                 fill: 1
             }
             ColumnLayout {
+                Layout.fillWidth: true
                 spacing: 0
                 StyledText {
+                    Layout.fillWidth: true
                     text: Weather.temp
                     font.bold: true
                     font.pointSize: Tokens.font.size.large
                     color: Colours.palette.m3onSurface
+                    elide: Text.ElideRight
                 }
                 StyledText {
+                    Layout.fillWidth: true
                     text: Weather.description
                     color: Colours.palette.m3onSurfaceVariant
                     font.pointSize: Tokens.font.size.small
+                    elide: Text.ElideRight
                 }
                 StyledText {
+                    Layout.fillWidth: true
                     visible: root.variant !== "compact" && !!Weather.city
                     text: Weather.city
                     color: Colours.palette.m3onSurfaceVariant
                     font.pointSize: Tokens.font.size.small
+                    elide: Text.ElideRight
                 }
             }
             Item { Layout.fillWidth: true }
             ColumnLayout {
                 visible: root.variant === "full"
-                StyledText { text: qsTr("Feels like %1").arg(Weather.feelsLike); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small }
-                StyledText { text: qsTr("Humidity %1%").arg(Weather.humidity); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small }
-                StyledText { text: qsTr("Wind %1 km/h").arg(Math.round(Weather.windSpeed)); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small }
+                StyledText { Layout.fillWidth: true; text: qsTr("Feels like %1").arg(Weather.feelsLike); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small; elide: Text.ElideRight }
+                StyledText { Layout.fillWidth: true; text: qsTr("Humidity %1%").arg(Weather.humidity); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small; elide: Text.ElideRight }
+                StyledText { Layout.fillWidth: true; text: qsTr("Wind %1 km/h").arg(Math.round(Weather.windSpeed)); color: Colours.palette.m3onSurfaceVariant; font.pointSize: Tokens.font.size.small; elide: Text.ElideRight }
             }
         }
 

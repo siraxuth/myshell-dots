@@ -26,9 +26,11 @@ StyledRect {
 
         anchors.centerIn: parent
         spacing: 0
+        width: Math.min(implicitWidth, parent.width - Tokens.padding.large * 2)
 
         StyledText {
             Layout.alignment: Qt.AlignHCenter
+            Layout.fillWidth: true
             text: variant === "analog" || variant === "materialAnalog" ? Time.format("h:mm") : Time.format("HH:mm")
             font.pointSize: variant === "minimal" ? Tokens.font.size.extraLarge * 1.8 : Tokens.font.size.extraLarge * 2.4
             font.bold: true
@@ -37,10 +39,12 @@ StyledRect {
 
         StyledText {
             Layout.alignment: Qt.AlignHCenter
+            Layout.fillWidth: true
             visible: variant !== "minimal" && variant !== "analog"
             text: Time.format(variant === "materialAnalog" ? "dddd, d MMMM yyyy" : "dddd, d MMMM")
             color: variant === "material" ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurfaceVariant
             font.pointSize: Tokens.font.size.normal
+            elide: Text.ElideRight
         }
     }
 

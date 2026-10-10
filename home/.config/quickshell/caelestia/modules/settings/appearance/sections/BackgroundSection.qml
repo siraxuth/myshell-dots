@@ -53,6 +53,28 @@ CollapsibleSection {
     }
 
     SectionContainer {
+        contentSpacing: Tokens.spacing.small
+        enabled: rootPane.desktopClockEnabled
+
+        StyledText {
+            text: qsTr("Show desktop clock on")
+            font.pointSize: Tokens.font.size.normal
+        }
+
+        Repeater {
+            model: Quickshell.screens
+
+            SwitchRow {
+                required property var modelData
+
+                label: modelData.name
+                checked: DesktopClockPrefs.isEnabledFor(modelData.name)
+                onToggled: enabled => DesktopClockPrefs.setEnabledFor(modelData.name, enabled)
+            }
+        }
+    }
+
+    SectionContainer {
         id: posContainer
 
         readonly property var pos: (rootPane.desktopClockPosition || "top-left").split('-')
@@ -346,6 +368,122 @@ CollapsibleSection {
                 rootPane.visualiserSpacing = newValue;
                 rootPane.saveConfig();
             }
+        }
+    }
+
+    SectionHeader {
+        title: qsTr("Live wallpaper behavior")
+        description: qsTr("Control playback, transitions and automatic pausing.")
+    }
+
+    SwitchRow {
+        label: qsTr("Enable wallpaper behavior rules")
+        checked: Wallpapers.behaviorEnabled
+        onToggled: checked => {
+            Wallpapers.behaviorEnabled = checked;
+            Wallpapers.saveSettings();
+        }
+    }
+
+    SwitchRow {
+        label: qsTr("Disable wallpaper transitions")
+        checked: Wallpapers.disableAnimations
+        onToggled: checked => {
+            Wallpapers.disableAnimations = checked;
+            Wallpapers.saveSettings();
+        }
+    }
+
+    SectionContainer {
+        contentSpacing: Tokens.spacing.normal
+
+        SliderInput {
+            Layout.fillWidth: true
+            label: qsTr("Transition duration")
+            enabled: Wallpapers.animsEnabled
+            from: 1
+            to: 2000
+            stepSize: 25
+            decimals: 0
+            suffix: "ms"
+            value: Wallpapers.animationDuration
+            onValueModified: value => {
+                Wallpapers.animationDuration = Math.max(1, Math.min(2000, Math.round(value)));
+                Wallpapers.saveSettings();
+            }
+        }
+    }
+
+    SwitchRow {
+        label: qsTr("Pause live wallpaper on battery")
+        checked: Wallpapers.batteryLimitEnabled
+        onToggled: checked => {
+            Wallpapers.batteryLimitEnabled = checked;
+            Wallpapers.saveSettings();
+        }
+    }
+
+    SectionContainer {
+        contentSpacing: Tokens.spacing.normal
+
+        SliderInput {
+            Layout.fillWidth: true
+            label: qsTr("Battery pause threshold")
+            enabled: Wallpapers.batteryLimitEnabled
+            from: 5
+            to: 95
+            stepSize: 5
+            decimals: 0
+            suffix: "%"
+            value: Wallpapers.batteryLimit
+            onValueModified: value => {
+                Wallpapers.batteryLimit = Math.max(5, Math.min(95, Math.round(value)));
+                Wallpapers.saveSettings();
+            }
+        }
+    }
+
+    SwitchRow {
+        label: qsTr("Pause when an app is fullscreen")
+        checked: Wallpapers.pauseOnFullscreen
+        onToggled: checked => {
+            Wallpapers.pauseOnFullscreen = checked;
+            Wallpapers.saveSettings();
+        }
+    }
+
+    SwitchRow {
+        label: qsTr("Pause in game mode")
+        checked: Wallpapers.pauseOnGameMode
+        onToggled: checked => {
+            Wallpapers.pauseOnGameMode = checked;
+            Wallpapers.saveSettings();
+        }
+    }
+
+    SectionContainer {
+        contentSpacing: Tokens.spacing.normal
+
+        SliderInput {
+            Layout.fillWidth: true
+            label: qsTr("Live wallpaper cache frame rate")
+            from: 0
+            to: 60
+            stepSize: 5
+            decimals: 0
+            value: Wallpapers.maxFps
+            formatValueFunction: value => value === 0 ? qsTr("Source rate") : `${Math.round(value)} fps`
+            onValueModified: value => {
+                Wallpapers.maxFps = Math.max(0, Math.min(60, Math.round(value)));
+                Wallpapers.saveSettings();
+            }
+        }
+        StyledText {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            color: Colours.palette.m3onSurfaceVariant
+            font.pointSize: Tokens.font.size.small
+            text: qsTr("This limit is used when the live wallpaper cache is generated. 0 keeps the source frame rate.")
         }
     }
 }

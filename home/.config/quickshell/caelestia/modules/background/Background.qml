@@ -58,7 +58,7 @@ Variants {
             id: clockLoader
 
             asynchronous: true
-            active: Config.background.desktopClock.enabled
+            active: Config.background.desktopClock.enabled && DesktopClockPrefs.isEnabledFor(win.modelData.name)
 
             anchors.margins: Tokens.padding.large * 2
             anchors.leftMargin: Tokens.padding.large * 2 + (win.taskbar?.position === "left" && state.endsWith("-left") ? Tokens.sizes.bar.innerWidth + Math.max(Tokens.padding.smaller, Config.border.thickness) : 0)
