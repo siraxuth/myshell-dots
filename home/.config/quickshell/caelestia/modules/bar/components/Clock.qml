@@ -30,7 +30,7 @@ StyledRect {
 
         Loader {
             asynchronous: true
-            Layout.alignment: Qt.AlignVCenter
+            Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
             active: Config.bar.clock.showIcon
             visible: active
@@ -42,7 +42,7 @@ StyledRect {
         }
 
         StyledText {
-            Layout.alignment: Qt.AlignVCenter
+            Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
             visible: Config.bar.clock.showDate
 
@@ -63,7 +63,7 @@ StyledRect {
         }
 
         StyledText {
-            Layout.alignment: Qt.AlignVCenter
+            Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
 
             horizontalAlignment: StyledText.AlignHCenter
             text: Time.format(root.isHorizontal ? "HH:mm" : "HH\nmm")

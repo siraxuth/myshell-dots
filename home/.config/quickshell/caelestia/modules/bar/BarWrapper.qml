@@ -20,7 +20,7 @@ Item {
     readonly property string position: BarPositionPrefs.position
     readonly property bool isHorizontal: BarPosition.isHorizontal(position)
 
-    property real extent: fullscreen ? 0 : Config.border.thickness
+    property real extent: fullscreen || disabled ? 0 : Config.border.thickness
     readonly property int clampedWidth: Math.max(Config.border.minThickness, extent)
     readonly property int clampedHeight: Math.max(Config.border.minThickness, extent)
     readonly property int reservedLeft: BarPosition.isLeft(position) ? clampedWidth : Config.border.thickness
@@ -31,7 +31,7 @@ Item {
     readonly property int contentWidth: Tokens.sizes.bar.innerWidth + padding * 2
     readonly property int contentHeight: contentWidth
     readonly property int contentThickness: contentWidth
-    readonly property int exclusiveZone: !disabled && (Config.bar.persistent || visibilities.bar) ? contentThickness : Config.border.thickness
+    readonly property int exclusiveZone: disabled ? 0 : ((Config.bar.persistent || visibilities.bar) ? contentThickness : Config.border.thickness)
     readonly property bool shouldBeVisible: !fullscreen && !disabled && (Config.bar.persistent || visibilities.bar || isHovered)
     property bool isHovered
 
@@ -48,7 +48,7 @@ Item {
     }
 
     clip: true
-    visible: extent > 0
+    visible: !disabled && extent > 0
     implicitWidth: isHorizontal ? screen.width : extent
     implicitHeight: isHorizontal ? extent : screen.height
 
