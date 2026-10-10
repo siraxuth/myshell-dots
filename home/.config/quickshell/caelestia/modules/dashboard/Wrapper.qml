@@ -13,9 +13,16 @@ Item {
 
     required property DrawerVisibilities visibilities
     required property bool onLeft
+    required property ShellScreen screen
     readonly property bool needsKeyboard: (content.item as Content)?.needsKeyboard ?? false
     readonly property DashboardState dashState: DashboardState {
         reloadableId: "dashboardState"
+    }
+    readonly property ScreenState screenState: ScreenState {
+        reloadableId: `screenState-${root.screen.name}`
+        modelData: root.screen
+        visibilities: root.visibilities
+        dashboardState: root.dashState
     }
     readonly property FileDialog facePicker: FileDialog {
         title: qsTr("Select a profile picture")
@@ -59,6 +66,7 @@ Item {
         sourceComponent: Content {
             visibilities: root.visibilities
             dashState: root.dashState
+            screenState: root.screenState
             facePicker: root.facePicker
         }
     }

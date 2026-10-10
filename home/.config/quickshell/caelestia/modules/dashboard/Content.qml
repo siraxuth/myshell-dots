@@ -22,6 +22,7 @@ Item {
         return false;
     }
     required property DashboardState dashState
+    required property ScreenState screenState
     required property FileDialog facePicker
 
     readonly property var dashboardTabs: {
@@ -167,6 +168,7 @@ Item {
                 Dash {
                     visibilities: root.visibilities
                     dashState: root.dashState
+                    screenState: root.screenState
                     facePicker: root.facePicker
                 }
             }

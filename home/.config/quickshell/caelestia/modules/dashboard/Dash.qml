@@ -10,6 +10,7 @@ GridLayout {
 
     required property DrawerVisibilities visibilities
     required property DashboardState dashState
+    required property ScreenState screenState
     required property FileDialog facePicker
 
     rowSpacing: Tokens.spacing.normal
@@ -26,7 +27,7 @@ GridLayout {
         User {
             id: user
 
-            visibilities: root.visibilities
+            screenState: root.screenState
             facePicker: root.facePicker
         }
     }
