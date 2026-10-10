@@ -9,6 +9,9 @@ JsonObject {
     property bool actionOnClick: false
     property int groupPreviewNum: 3
     property bool openExpanded: false // Show the notifichation in expanded state when opening
+    property bool soundEnabled: true
+    property string soundId: "soft"
+    property real soundVolume: 0.45
     property Sizes sizes: Sizes {}
 
     component Sizes: JsonObject {

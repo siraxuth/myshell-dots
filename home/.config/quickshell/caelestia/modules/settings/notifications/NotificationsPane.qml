@@ -193,6 +193,8 @@ Item {
                             }
                         }
                     }
+
+                    NotificationSoundControls {}
                 }
 
                 ColumnLayout {

@@ -94,6 +94,9 @@ Singleton {
         onNotification: notif => {
             notif.tracked = true;
 
+            if (!props.dnd)
+                Sounds.playNotification();
+
             const comp = notifComp.createObject(root, {
                 popup: root.shouldShowPopup(),
                 notification: notif

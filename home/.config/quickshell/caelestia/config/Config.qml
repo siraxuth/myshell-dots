@@ -273,7 +273,10 @@ Singleton {
             expandThreshold: notifs.expandThreshold,
             actionOnClick: notifs.actionOnClick,
             groupPreviewNum: notifs.groupPreviewNum,
-            openExpanded: notifs.openExpanded
+            openExpanded: notifs.openExpanded,
+            soundEnabled: notifs.soundEnabled,
+            soundId: notifs.soundId,
+            soundVolume: notifs.soundVolume
         };
     }
 
