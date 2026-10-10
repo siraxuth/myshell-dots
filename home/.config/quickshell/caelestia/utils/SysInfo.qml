@@ -17,6 +17,7 @@ Singleton {
     property bool isDefaultLogo: true
 
     property string uptime
+    property string uptimeShort
     readonly property string user: Quickshell.env("USER")
     readonly property string wm: Quickshell.env("XDG_CURRENT_DESKTOP") || Quickshell.env("XDG_SESSION_DESKTOP")
     readonly property string shell: Quickshell.env("SHELL").split("/").pop()
@@ -83,6 +84,13 @@ Singleton {
             if (minutes > 0 || !str)
                 str += `${str ? ", " : ""}${minutes} minute${minutes === 1 ? "" : "s"}`;
             root.uptime = str;
+
+            if (days > 0)
+                root.uptimeShort = `${days}d${hours > 0 ? ` ${hours}h` : ""}`;
+            else if (hours > 0)
+                root.uptimeShort = `${hours}h${minutes > 0 ? ` ${minutes}m` : ""}`;
+            else
+                root.uptimeShort = `${minutes}m`;
         }
     }
 }
