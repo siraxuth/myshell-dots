@@ -13,6 +13,7 @@ Item {
     id: root
 
     required property PopoutState popouts
+    required property real maxAppsHeight
 
     implicitWidth: layout.implicitWidth + Tokens.padding.normal * 2
     implicitHeight: layout.implicitHeight + Tokens.padding.normal * 2
@@ -101,6 +102,17 @@ Item {
                     Anim {}
                 }
             }
+        }
+
+        StyledText {
+            Layout.topMargin: Tokens.spacing.small
+            text: qsTr("Applications")
+            font.weight: 500
+        }
+
+        AppVolumeMixer {
+            Layout.fillWidth: true
+            maxHeight: root.maxAppsHeight
         }
 
         IconTextButton {

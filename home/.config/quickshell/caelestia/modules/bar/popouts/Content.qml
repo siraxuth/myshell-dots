@@ -11,6 +11,7 @@ Item {
     id: root
 
     required property PopoutState popouts
+    required property ShellScreen screen
     readonly property Popout currentPopout: content.children.find(c => c.shouldBeActive) ?? null
     readonly property Item current: currentPopout?.item ?? null
 
@@ -113,6 +114,7 @@ Item {
             name: "audio"
             sourceComponent: Audio {
                 popouts: root.popouts
+                maxAppsHeight: Math.min(320, root.screen.height * 0.32)
             }
         }
 
