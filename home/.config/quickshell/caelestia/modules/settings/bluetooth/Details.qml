@@ -15,6 +15,10 @@ import qs.utils
 
 StyledFlickable {
     id: root
+    SettingsScrollHandler {
+        flickable: root
+    }
+
 
     required property Session session
     readonly property BluetoothDevice device: session.bt.active
@@ -22,7 +26,7 @@ StyledFlickable {
     flickableDirection: Flickable.VerticalFlick
     contentHeight: detailsWrapper.height
 
-    StyledScrollBar.vertical: StyledScrollBar {
+    SettingsScrollBar.vertical: SettingsScrollBar {
         flickable: root
     }
 

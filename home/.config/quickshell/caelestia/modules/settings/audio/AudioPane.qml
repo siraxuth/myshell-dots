@@ -26,10 +26,14 @@ Item {
             StyledFlickable {
                 id: leftAudioFlickable
 
+                SettingsScrollHandler {
+                    flickable: leftAudioFlickable
+                }
+
                 flickableDirection: Flickable.VerticalFlick
                 contentHeight: leftContent.height
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: leftAudioFlickable
                 }
 
@@ -216,10 +220,14 @@ Item {
             StyledFlickable {
                 id: rightAudioFlickable
 
+                SettingsScrollHandler {
+                    flickable: rightAudioFlickable
+                }
+
                 flickableDirection: Flickable.VerticalFlick
                 contentHeight: contentLayout.height
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: rightAudioFlickable
                 }
 

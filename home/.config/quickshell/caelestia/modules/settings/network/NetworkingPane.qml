@@ -30,11 +30,15 @@ Item {
         leftContent: Component {
             StyledFlickable {
                 id: leftFlickable
+                SettingsScrollHandler {
+                    flickable: leftFlickable
+                }
+
 
                 flickableDirection: Flickable.VerticalFlick
                 contentHeight: leftContent.height
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: leftFlickable
                 }
 
@@ -281,11 +285,15 @@ Item {
 
         StyledFlickable {
             id: settingsFlickable
+            SettingsScrollHandler {
+                flickable: settingsFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: settingsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: settingsFlickable
             }
 
@@ -305,11 +313,15 @@ Item {
 
         StyledFlickable {
             id: ethernetFlickable
+            SettingsScrollHandler {
+                flickable: ethernetFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: ethernetDetailsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: ethernetFlickable
             }
 
@@ -329,11 +341,15 @@ Item {
 
         StyledFlickable {
             id: wirelessFlickable
+            SettingsScrollHandler {
+                flickable: wirelessFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: wirelessDetailsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: wirelessFlickable
             }
 
@@ -353,11 +369,15 @@ Item {
 
         StyledFlickable {
             id: vpnFlickable
+            SettingsScrollHandler {
+                flickable: vpnFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: vpnDetailsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: vpnFlickable
             }
 

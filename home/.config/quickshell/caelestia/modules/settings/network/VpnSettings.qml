@@ -51,6 +51,11 @@ ColumnLayout {
         contentSpacing: Tokens.spacing.normal
 
         ListView {
+            id: settingsScroller1
+            SettingsScrollHandler {
+                flickable: settingsScroller1
+            }
+
             Layout.fillWidth: true
             Layout.preferredHeight: contentHeight
 

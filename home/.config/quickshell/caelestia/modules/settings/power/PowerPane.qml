@@ -20,6 +20,11 @@ Item {
         anchors.fill: parent
 
         Flickable {
+            id: settingsScroller1
+            SettingsScrollHandler {
+                flickable: settingsScroller1
+            }
+
             anchors.fill: parent
             contentHeight: layout.implicitHeight
             clip: true

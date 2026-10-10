@@ -124,8 +124,9 @@ Item {
 
                     asynchronous: true
                     active: {
-                        const isActive = root.session.activeIndex === 3;
-                        const isAdjacent = Math.abs(root.session.activeIndex - 3) === 1;
+                        const appearanceIndex = PaneRegistry.getIndexById("appearance");
+                        const isActive = root.session.activeIndex === appearanceIndex;
+                        const isAdjacent = Math.abs(root.session.activeIndex - appearanceIndex) === 1;
                         const splitLayout = root.children[0];
                         const loader = splitLayout && splitLayout.rightLoader ? splitLayout.rightLoader : null;
                         const shouldActivate = loader && loader.item !== null && (isActive || isAdjacent);
@@ -152,13 +153,17 @@ Item {
         leftContent: Component {
             StyledFlickable {
                 id: sidebarFlickable
+                SettingsScrollHandler {
+                    flickable: sidebarFlickable
+                }
+
 
                 readonly property var rootPane: root
 
                 flickableDirection: Flickable.VerticalFlick
                 contentHeight: sidebarLayout.height
 
-                StyledScrollBar.vertical: StyledScrollBar {
+                SettingsScrollBar.vertical: SettingsScrollBar {
                     flickable: sidebarFlickable
                 }
 

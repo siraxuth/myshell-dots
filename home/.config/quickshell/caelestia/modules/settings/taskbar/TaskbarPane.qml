@@ -138,11 +138,15 @@ Item {
 
         StyledFlickable {
             id: sidebarFlickable
+            SettingsScrollHandler {
+                flickable: sidebarFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: sidebarLayout.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: sidebarFlickable
             }
 

@@ -71,6 +71,10 @@ ColumnLayout {
 
     StyledListView {
         id: view
+        SettingsScrollHandler {
+            flickable: view
+        }
+
 
         Layout.fillWidth: true
         implicitHeight: contentHeight

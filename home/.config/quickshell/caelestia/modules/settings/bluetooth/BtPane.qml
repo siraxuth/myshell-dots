@@ -26,11 +26,15 @@ SplitPaneWithDetails {
     leftContent: Component {
         StyledFlickable {
             id: leftFlickable
+            SettingsScrollHandler {
+                flickable: leftFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: deviceList.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: leftFlickable
             }
 
@@ -53,11 +57,15 @@ SplitPaneWithDetails {
     rightSettingsComponent: Component {
         StyledFlickable {
             id: settingsFlickable
+            SettingsScrollHandler {
+                flickable: settingsFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: settingsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: settingsFlickable
             }
 

@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import qs.modules.settings.components
 import ".."
 import "."
 import QtQuick
@@ -313,6 +314,10 @@ Item {
 
                 ListView {
                     id: charList
+                    SettingsScrollHandler {
+                        flickable: charList
+                    }
+
 
                     readonly property int fullWidth: count * (implicitHeight + spacing) - spacing
 

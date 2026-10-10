@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 
+import qs.modules.settings.components
 import ".."
 import QtQuick
 import QtQuick.Controls
@@ -71,6 +72,10 @@ ColumnLayout {
 
     ListView {
         id: listView
+        SettingsScrollHandler {
+            flickable: listView
+        }
+
 
         Layout.fillWidth: true
         Layout.preferredHeight: contentHeight

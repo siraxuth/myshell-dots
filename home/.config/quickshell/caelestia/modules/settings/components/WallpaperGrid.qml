@@ -12,6 +12,10 @@ import qs.services
 
 GridView {
     id: root
+    SettingsScrollHandler {
+        flickable: root
+    }
+
 
     required property Session session
 
@@ -25,7 +29,7 @@ GridView {
 
     clip: true
 
-    StyledScrollBar.vertical: StyledScrollBar {
+    SettingsScrollBar.vertical: SettingsScrollBar {
         flickable: root
     }
 

@@ -77,11 +77,15 @@ Item {
 
         StyledFlickable {
             id: dashboardFlickable
+            SettingsScrollHandler {
+                flickable: dashboardFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: dashboardLayout.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: dashboardFlickable
             }
 

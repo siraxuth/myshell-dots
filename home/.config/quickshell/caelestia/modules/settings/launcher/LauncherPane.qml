@@ -291,6 +291,10 @@ Item {
 
                     sourceComponent: StyledListView {
                         id: appsListView
+                        SettingsScrollHandler {
+                            flickable: appsListView
+                        }
+
 
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -299,7 +303,7 @@ Item {
                         spacing: Tokens.spacing.small / 2
                         clip: true
 
-                        StyledScrollBar.vertical: StyledScrollBar {
+                        SettingsScrollBar.vertical: SettingsScrollBar {
                             flickable: parent
                         }
 
@@ -489,11 +493,15 @@ Item {
 
         StyledFlickable {
             id: settingsFlickable
+            SettingsScrollHandler {
+                flickable: settingsFlickable
+            }
+
 
             flickableDirection: Flickable.VerticalFlick
             contentHeight: settingsInner.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: settingsFlickable
             }
 
@@ -579,12 +587,16 @@ Item {
 
                 StyledFlickable {
                     id: detailsFlickable
+                    SettingsScrollHandler {
+                        flickable: detailsFlickable
+                    }
+
 
                     anchors.fill: parent
                     flickableDirection: Flickable.VerticalFlick
                     contentHeight: debugLayout.height
 
-                    StyledScrollBar.vertical: StyledScrollBar {
+                    SettingsScrollBar.vertical: SettingsScrollBar {
                         flickable: parent
                     }
 

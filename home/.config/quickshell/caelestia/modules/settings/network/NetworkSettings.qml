@@ -152,6 +152,11 @@ ColumnLayout {
         }
 
         StyledFlickable {
+            id: settingsScroller1
+            SettingsScrollHandler {
+                flickable: settingsScroller1
+            }
+
             anchors.fill: parent
             anchors.margins: Tokens.padding.large * 1.5
             flickableDirection: Flickable.VerticalFlick
