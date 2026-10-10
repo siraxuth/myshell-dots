@@ -6,10 +6,14 @@ import Quickshell.Wayland
 import qs.components.misc
 
 Scope {
+    id: root
+
     property alias lock: lock
+    readonly property bool lockOnStart: Quickshell.env("CAELESTIA_BOOT_LOCK") === "1"
 
     WlSessionLock {
         id: lock
+        locked: root.lockOnStart
 
         signal unlock
 
