@@ -20,7 +20,7 @@ LazyListView {
 
     spacing: Tokens.spacing.small
     readyDelay: 1
-    cacheBuffer: 400
+    cacheBuffer: 120
     asynchronous: true
 
     onViewportAdjustNeeded: d => {

@@ -62,7 +62,10 @@ Item {
 
             orientation: Qt.Vertical
             spacing: 0
-            cacheBuffer: (QsWindow.window as QsWindow)?.screen.height ?? 0
+            // Popup notifications are capped to the screen height, so caching an
+            // extra screen keeps a second set of delegates (and their images) alive
+            // off-screen. Create delegates only when they enter the visible area.
+            cacheBuffer: 0
 
             delegate: NotifWrapper {}
 
