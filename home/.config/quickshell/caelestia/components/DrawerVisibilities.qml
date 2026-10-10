@@ -6,6 +6,7 @@ PersistentProperties {
     property bool session
     property bool launcher
     property bool dashboard
+    property bool capture
     property bool liveWallpaper
     property bool utilities
     property bool sidebar

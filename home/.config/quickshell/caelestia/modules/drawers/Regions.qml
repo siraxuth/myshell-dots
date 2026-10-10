@@ -42,6 +42,12 @@ Region {
     }
 
     R {
+        panel: root.panels.capture
+        y: 0
+        height: panel.height * (1 - root.panels.capture.offsetScale) + root.borderThickness
+    }
+
+    R {
         panel: root.panels.launcher
         y: LauncherPrefs.position === "bottom" ? root.win.height - height : panel.y + root.borderThickness
         height: panel.height * (1 - root.panels.launcher.offsetScale) + root.borderThickness

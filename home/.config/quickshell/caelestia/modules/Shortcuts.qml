@@ -74,6 +74,14 @@ Scope {
     // qmllint disable unresolved-type
     CustomShortcut {
         // qmllint enable unresolved-type
+        name: "capture"
+        description: "Open screenshot and recording controls"
+        onPressed: CaptureSession.toggle()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
         name: "liveWallpaper"
         description: "Toggle live wallpaper picker"
         onPressed: {

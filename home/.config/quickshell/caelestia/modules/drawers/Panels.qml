@@ -6,6 +6,7 @@ import qs.services
 import qs.modules.bar as Bar
 import qs.modules.dashboard as Dashboard
 import qs.modules.livewallpaper as LiveWp
+import qs.modules.capture as Capture
 import qs.modules.launcher as Launcher
 import qs.modules.notifications as Notifications
 import qs.modules.osd as Osd
@@ -35,6 +36,7 @@ Item {
     readonly property alias launcher: launcher
     readonly property alias dashboard: dashboard
     readonly property alias liveWallpaper: liveWallpaper
+    readonly property alias capture: capture
     readonly property alias popouts: popoutsWrapper.content
     readonly property alias popoutsWrapper: popoutsWrapper
     readonly property alias utilities: utilities
@@ -144,12 +146,22 @@ Item {
     Dashboard.Wrapper {
         id: dashboard
 
+        screen: root.screen
         visibilities: root.visibilities
         onLeft: bar.isHorizontal
     }
 
     LiveWp.Wrapper {
         id: liveWallpaper
+
+        visibilities: root.visibilities
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+    }
+
+    Capture.Wrapper {
+        id: capture
 
         visibilities: root.visibilities
 
