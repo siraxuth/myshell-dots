@@ -16,7 +16,7 @@ StyledClippingRect {
     required property bool isHorizontal
 
     readonly property bool onSpecial: (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor)?.lastIpcObject.specialWorkspace?.name !== ""
-    readonly property int activeWsId: GlobalConfig.bar.workspaces.perMonitorWorkspaces ? (Hypr.monitorFor(screen).activeWorkspace?.id ?? 1) : Hypr.activeWsId
+    readonly property int activeWsId: GlobalConfig.bar.workspaces.perMonitorWorkspaces ? (Hypr.monitorFor(screen)?.activeWorkspace?.id ?? 1) : Hypr.activeWsId
 
     readonly property var occupied: {
         const occ = {};
@@ -104,7 +104,13 @@ StyledClippingRect {
             anchors.fill: layout
             onClicked: event => {
                 const ws = (layout.childAt(event.x, event.y) as Workspace)?.ws;
-                if (Hypr.activeWsId !== ws)
+                const monitor = GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(root.screen) : Hypr.focusedMonitor;
+                if (!monitor || ws === undefined)
+                    return;
+                if (Hypr.focusedMonitor?.name !== monitor.name)
+                    Hypr.dispatch(`focusmonitor ${monitor.name}`);
+                const currentWs = GlobalConfig.bar.workspaces.perMonitorWorkspaces ? monitor.activeWorkspace?.id : Hypr.activeWsId;
+                if (currentWs !== ws)
                     Hypr.dispatch(`workspace ${ws}`);
                 else
                     Hypr.dispatch("togglespecialworkspace special");

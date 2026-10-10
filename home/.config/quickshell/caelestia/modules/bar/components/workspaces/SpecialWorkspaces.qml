@@ -300,7 +300,9 @@ Item {
             asynchronous: true
 
             Layout.alignment: root.isHorizontal ? Qt.AlignVCenter : Qt.AlignHCenter
-            Layout.preferredWidth: root.isHorizontal ? ws.indicatorSize : Tokens.sizes.bar.innerWidth
+            // The special-workspace view is inset by the workspace container's
+            // margins, so use its actual width instead of the full bar width.
+            Layout.preferredWidth: root.isHorizontal ? ws.indicatorSize : ws.width
             Layout.preferredHeight: root.isHorizontal ? Tokens.sizes.bar.innerWidth : ws.indicatorSize
 
             sourceComponent: ws.icon.length === 1 ? letterComp : iconComp
@@ -311,6 +313,7 @@ Item {
                 MaterialIcon {
                     fill: 1
                     text: ws.icon
+                    horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
                 }
             }
@@ -320,6 +323,7 @@ Item {
 
                 StyledText {
                     text: ws.icon
+                    horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
                 }
             }

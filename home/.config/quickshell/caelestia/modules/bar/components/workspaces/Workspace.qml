@@ -46,21 +46,11 @@ Item {
             id: workspaceLabel
 
             StyledText {
-                text: {
-                    const ws = Hypr.workspaces.values.find(w => w.id === root.ws);
-                    const relId = GlobalConfig.bar.workspaces.perMonitorWorkspaces ? root.ws - root.groupOffset : root.ws;
-                    const wsName = !ws || ws.name == root.ws ? relId : ws.name[0];
-                    let displayName = wsName.toString();
-                    if (Config.bar.workspaces.capitalisation.toLowerCase() === "upper")
-                        displayName = displayName.toUpperCase();
-                    else if (Config.bar.workspaces.capitalisation.toLowerCase() === "lower")
-                        displayName = displayName.toLowerCase();
-                    const label = Config.bar.workspaces.label || displayName;
-                    const occupiedLabel = Config.bar.workspaces.occupiedLabel || label;
-                    const activeLabel = Config.bar.workspaces.activeLabel || (root.isOccupied ? occupiedLabel : label);
-                    return root.activeWsId === root.ws ? activeLabel : root.isOccupied ? occupiedLabel : label;
-                }
+                // Always use the workspace number. Configured label glyphs and
+                // workspace names were overriding the numeric labels per state.
+                text: (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? root.ws - root.groupOffset : root.ws).toString()
                 color: Config.bar.workspaces.occupiedBg || root.isOccupied || root.activeWsId === root.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
+                font.bold: root.activeWsId === root.ws
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 anchors.fill: parent
