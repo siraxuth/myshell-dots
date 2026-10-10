@@ -32,6 +32,22 @@ Item {
     function res(m: var): string {
         return `${m.width}x${m.height}@${m.refreshRate.toFixed(2)}`;
     }
+    function modeResolution(mode: string): string {
+        const match = mode.match(/^(\d+x\d+)@([\d.]+)(?:Hz)?$/);
+        return match ? match[1] : "";
+    }
+    function modeRate(mode: string): real {
+        const match = mode.match(/@(\d+(?:\.\d+)?)(?:Hz)?$/);
+        return match ? Number(match[1]) : 0;
+    }
+    function cleanMode(mode: var): string {
+        return ("" + mode).replace(/Hz$/, "");
+    }
+    function modesForResolution(m: var, resolution: string): var {
+        return (m.availableModes ?? []).map(cleanMode)
+            .filter(mode => modeResolution(mode) === resolution)
+            .sort((a, b) => modeRate(b) - modeRate(a));
+    }
     function cMode(m: var): string {
         return (chosen[m.name] && chosen[m.name].mode) ? chosen[m.name].mode : res(m);
     }
@@ -179,6 +195,11 @@ Item {
         anchors.fill: parent
 
         Flickable {
+            id: settingsScroller1
+            SettingsScrollHandler {
+                flickable: settingsScroller1
+            }
+
             anchors.fill: parent
             contentHeight: layout.implicitHeight
             clip: true
@@ -321,13 +342,13 @@ Item {
                 Layout.topMargin: Tokens.spacing.small
                 spacing: Tokens.spacing.normal
 
-                StyledText {
-                    Layout.fillWidth: true
-                    wrapMode: Text.Wrap
-                    color: Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Tokens.font.size.small
-                    text: qsTr("Drag screens to position them (they snap to each other's edges). ★ = primary (focused). Apply writes ~/.config/hypr/monitors.conf (backup: monitors.conf.bak) and reloads.")
-                }
+            StyledText {
+                Layout.fillWidth: true
+                wrapMode: Text.Wrap
+                color: Colours.palette.m3onSurfaceVariant
+                font.pointSize: Tokens.font.size.small
+                text: qsTr("Drag screens to position them (they snap to each other's edges). ★ = primary (focused). Apply writes ~/.config/hypr/monitors.conf (backup: monitors.conf.bak) and reloads.")
+            }
 
                 StyledRect {
                     implicitWidth: resetText.implicitWidth + Tokens.padding.large * 2
@@ -375,8 +396,8 @@ Item {
             // ── Resolution & scale ────────────────────────────────────────
             SectionHeader {
                 Layout.topMargin: Tokens.spacing.large
-                title: qsTr("Resolution & scale")
-                description: qsTr("Every mode the monitor reports — applied on Apply")
+                title: qsTr("Resolution, refresh rate & scale")
+                description: qsTr("Choose a resolution first, then pick a refresh rate supported by that display")
             }
 
             Repeater {
@@ -437,6 +458,14 @@ Item {
 
         property var monitor
         property bool open: false
+        readonly property var resolutions: [...new Set((monitor.availableModes ?? []).map(mode => root.modeResolution(root.cleanMode(mode))).filter(Boolean))]
+            .sort((a, b) => {
+                const [aw, ah] = a.split("x").map(Number);
+                const [bw, bh] = b.split("x").map(Number);
+                return (bw * bh) - (aw * ah) || bw - aw;
+            })
+        readonly property string selectedResolution: root.modeResolution(root.cMode(monitor)) || `${monitor.width}x${monitor.height}`
+        readonly property var selectedModes: root.modesForResolution(monitor, selectedResolution)
 
         spacing: Tokens.spacing.small / 2
 
@@ -527,35 +556,129 @@ Item {
                     }
                 }
 
-                Repeater {
-                    model: sel.monitor.availableModes
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
 
-                    StyledRect {
-                        required property var modelData
+                    StyledText {
+                        text: qsTr("1 · Resolution")
+                        color: Colours.palette.m3onSurfaceVariant
+                        font.pointSize: Tokens.font.size.small
+                    }
 
-                        readonly property string m: ("" + modelData).replace("Hz", "")
-                        readonly property bool picked: root.cMode(sel.monitor) === m
-
+                    Flow {
                         Layout.fillWidth: true
-                        implicitHeight: mt.implicitHeight + Tokens.padding.normal * 2
-                        radius: Tokens.rounding.small
-                        color: picked ? Colours.palette.m3primaryContainer : "transparent"
+                        spacing: Tokens.spacing.small
 
-                        StateLayer {
-                            radius: parent.radius
-                            onClicked: root.setChosen(sel.monitor.name, "mode", parent.m)
-                        }
+                        Repeater {
+                            model: sel.resolutions
 
-                        StyledText {
-                            id: mt
+                            StyledRect {
+                                required property string modelData
+                                readonly property bool picked: sel.selectedResolution === modelData
+                                implicitWidth: resolutionText.implicitWidth + Tokens.padding.large * 2
+                                implicitHeight: resolutionText.implicitHeight + Tokens.padding.normal * 2
+                                radius: Tokens.rounding.full
+                                color: picked ? Colours.palette.m3primaryContainer : Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                                border.width: picked ? 1 : 0
+                                border.color: Colours.palette.m3primary
 
-                            anchors.left: parent.left
-                            anchors.leftMargin: Tokens.padding.normal
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: modelData
-                            color: parent.picked ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
+                                StateLayer {
+                                    radius: parent.radius
+                                    onClicked: {
+                                        const modes = root.modesForResolution(sel.monitor, parent.modelData);
+                                        if (!modes.length)
+                                            return;
+                                        // A resolution change starts at the best refresh rate the panel supports.
+                                        root.setChosen(sel.monitor.name, "mode", modes[0]);
+                                    }
+                                }
+
+                                StyledText {
+                                    id: resolutionText
+                                    anchors.centerIn: parent
+                                    text: modelData.replace("x", " × ")
+                                    color: parent.picked ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
+                                    font.weight: parent.picked ? 600 : 400
+                                }
+                            }
                         }
                     }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("2 · Refresh rate")
+                            color: Colours.palette.m3onSurfaceVariant
+                            font.pointSize: Tokens.font.size.small
+                        }
+                        StyledText {
+                            text: sel.selectedModes.length ? qsTr("%1 options").arg(sel.selectedModes.length) : qsTr("No modes reported")
+                            color: Colours.palette.m3onSurfaceVariant
+                            font.pointSize: Tokens.font.size.small
+                        }
+                        StyledRect {
+                            visible: sel.selectedModes.length > 0
+                            implicitWidth: autoText.implicitWidth + Tokens.padding.large * 2
+                            implicitHeight: autoText.implicitHeight + Tokens.padding.small * 2
+                            radius: Tokens.rounding.full
+                            color: Colours.palette.m3secondaryContainer
+
+                            StateLayer {
+                                radius: parent.radius
+                                onClicked: root.setChosen(sel.monitor.name, "mode", sel.selectedModes[0])
+                            }
+
+                            StyledText {
+                                id: autoText
+                                anchors.centerIn: parent
+                                text: qsTr("Auto · %1 Hz").arg(root.modeRate(sel.selectedModes[0] ?? ""))
+                                color: Colours.palette.m3onSecondaryContainer
+                                font.pointSize: Tokens.font.size.small
+                                font.weight: 600
+                            }
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.small
+
+                        Repeater {
+                            model: sel.selectedModes
+
+                            StyledRect {
+                                required property string modelData
+                                readonly property bool picked: root.cMode(sel.monitor) === modelData
+                                implicitWidth: rateText.implicitWidth + Tokens.padding.large * 2
+                                implicitHeight: rateText.implicitHeight + Tokens.padding.normal * 2
+                                radius: Tokens.rounding.full
+                                color: picked ? Colours.palette.m3primary : Colours.layer(Colours.palette.m3surfaceContainer, 2)
+                                border.width: picked ? 1 : 0
+                                border.color: Colours.palette.m3primary
+
+                                StateLayer {
+                                    radius: parent.radius
+                                    onClicked: root.setChosen(sel.monitor.name, "mode", parent.modelData)
+                                }
+
+                                StyledText {
+                                    id: rateText
+                                    anchors.centerIn: parent
+                                    text: `${root.modeRate(modelData)} Hz` + (index === 0 ? `  ·  ${qsTr("Fastest")}` : "")
+                                    color: parent.picked ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                                    font.weight: parent.picked ? 600 : 400
+                                }
+                            }
+                        }
+                    }
+
                 }
             }
             }
