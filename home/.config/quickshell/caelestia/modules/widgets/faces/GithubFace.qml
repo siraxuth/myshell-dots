@@ -6,6 +6,7 @@ import QtQuick.Controls
 import Quickshell.Io
 import Caelestia.Config
 import qs.components
+import qs.services
 import qs.components.controls
 
 Item {
@@ -115,6 +116,7 @@ Item {
                     text: root.widget.wProps?.username ? `@${root.widget.wProps.username}` : "GitHub"
                     color: root.textColor
                     font.bold: true
+                    elide: Text.ElideRight
                 }
                 Item { Layout.fillWidth: true }
                 IconButton { icon: "chevron_left"; disabled: root.selectedYear <= 2008; onClicked: { root.selectedYear--; root.requestData(); } }
@@ -122,10 +124,12 @@ Item {
                 IconButton { icon: "chevron_right"; disabled: root.selectedYear >= root.currentYear; onClicked: { root.selectedYear++; root.requestData(); } }
             }
             StyledText {
+                Layout.fillWidth: true
                 visible: root.contributionCount >= 0
                 text: qsTr("%1 contributions").arg(root.contributionCount)
                 color: root.textColor
                 font.pointSize: Tokens.font.size.small
+                elide: Text.ElideRight
             }
             StyledText {
                 Layout.fillWidth: true
@@ -133,6 +137,7 @@ Item {
                 text: root.errorText
                 color: Qt.alpha(root.textColor, 0.72)
                 font.pointSize: Tokens.font.size.small
+                elide: Text.ElideRight
             }
             GridLayout {
                 Layout.fillWidth: true

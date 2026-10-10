@@ -37,7 +37,11 @@ Item {
         id: createDirectory
 
         command: ["mkdir", "-p", root.directory]
-        onExited: {
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                WidgetsPrefs.setSaveState(root.screen.name, "error");
+                return;
+            }
             root.directoryReady = true;
             layoutFile.reload();
         }
@@ -50,12 +54,17 @@ Item {
         watchChanges: false
         path: root.filePath
 
+        onSaved: WidgetsPrefs.setSaveState(root.screen.name, "saved")
+        onSaveFailed: error => WidgetsPrefs.setSaveState(root.screen.name, "error")
         onLoaded: {
             try {
                 const parsed = JSON.parse(text());
+                if (!Array.isArray(parsed))
+                    throw new Error("Invalid widget layout");
                 WidgetsPrefs.setLoadedLayout(root.screen.name, WidgetsPrefs.normalizeLayout(parsed));
+                WidgetsPrefs.setSaveState(root.screen.name, "saved");
             } catch (error) {
-                WidgetsPrefs.setLoadedLayout(root.screen.name, []);
+                WidgetsPrefs.setSaveState(root.screen.name, "loadError");
             }
         }
 
@@ -64,7 +73,7 @@ Item {
                 root.primaryMissing = true;
                 root.finishMigration();
             } else {
-                WidgetsPrefs.setLoadedLayout(root.screen.name, []);
+                WidgetsPrefs.setSaveState(root.screen.name, "loadError");
             }
         }
     }
@@ -94,6 +103,19 @@ Item {
 
     Connections {
         target: WidgetsPrefs
+
+        function onRetrySave(screenName: string): void {
+            if (screenName !== root.screen.name)
+                return;
+            if (!root.directoryReady)
+                createDirectory.exec();
+            else if (!WidgetsPrefs.isReady(screenName))
+                layoutFile.reload();
+            else {
+                WidgetsPrefs.setSaveState(screenName, "saving");
+                writeTimer.restart();
+            }
+        }
 
         function onLegacyReadyChanged(): void {
             root.finishMigration();

@@ -32,8 +32,8 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 MaterialIcon { text: root.icon; color: Colours.palette.m3primary }
-                StyledText { Layout.fillWidth: true; text: root.label; color: Colours.palette.m3onSurfaceVariant }
-                StyledText { text: root.value; color: Colours.palette.m3onSurface; font.bold: true }
+                StyledText { Layout.fillWidth: true; text: root.label; color: Colours.palette.m3onSurfaceVariant; elide: Text.ElideRight }
+                StyledText { Layout.preferredWidth: 60; text: root.value; color: Colours.palette.m3onSurface; font.bold: true; elide: Text.ElideRight; horizontalAlignment: Text.AlignRight }
             }
             Rectangle {
                 Layout.fillWidth: true

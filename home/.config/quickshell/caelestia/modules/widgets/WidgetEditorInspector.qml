@@ -1,371 +1,605 @@
 pragma ComponentBehavior: Bound
-
 import QtQuick
-import QtQuick.Layouts
+import qs.modules.settings.components
 import QtQuick.Controls
+import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
 
-StyledRect {
+Rectangle {
     id: root
-
     required property string screenName
     required property ShellScreen screen
     property var selectedIds: []
     property bool aspectLock: false
     readonly property var widgets: WidgetsPrefs.layoutFor(screenName)
-    readonly property var selected: widgets.find(item => String(item.wId) === String(selectedIds.length ? selectedIds[selectedIds.length - 1] : "")) ?? null
-    onSelectedChanged: syncInspectorFields()
-
+    onSelectedChanged: Qt.callLater(() => {
+        if (scroller.contentItem && "contentY" in scroller.contentItem)
+            scroller.contentItem.contentY = 0;
+    })
+    readonly property var selected: widgets.find(w => String(w.wId) === selectedIds[selectedIds.length - 1]) ?? null
+    readonly property var size: selected && screen ? WidgetRegistry.sizeFor(selected, screen.width, screen.height) : ({
+            width: 0,
+            height: 0
+        })
+    readonly property var position: selected && screen ? WidgetRegistry.positionFor(selected, screen.width, screen.height) : ({
+            x: 0,
+            y: 0
+        })
     signal selectionRequested(string id, bool additive)
     signal propertyEdited(string id, string key, var value)
+    signal geometryEdited(string id, string key, real value)
     signal variantRequested(string id, string variant)
     signal anchorRequested(string id, string horizontal, string vertical)
     signal aspectLockRequested(bool locked)
     signal resetSizeRequested(string id)
     signal removeRequested(string id)
     signal orderRequested(string id, int direction)
-
-    radius: Tokens.rounding.large
+    signal imageBrowseRequested(string id)
     color: Colours.palette.m3surfaceContainer
+    radius: 16
     clip: true
-
     function edit(key: string, value: var): void {
-        if (selected) propertyEdited(String(selected.wId), key, value);
+        if (selected)
+            propertyEdited(String(selected.wId), key, value);
     }
 
-    function applyImagePath(): void {
-        if (!selected || selected.wType !== "image") return;
-        const path = WidgetsPrefs.normalizeImagePath(imagePathInput.draftPath);
-        edit("wImagePath", path);
-        imagePathInput.draftPath = path;
-        imagePathInput.text = path;
-    }
-
-    function syncInspectorFields(): void {
-        if (!imagePathInput.activeFocus) {
-            imagePathInput.draftPath = selected?.wType === "image" ? String(selected.wImagePath ?? "") : "";
-            imagePathInput.text = imagePathInput.draftPath;
-        }
-        if (!radiusInput.activeFocus) radiusInput.text = String(Math.round(Number(selected?.wProps?.bgRadius ?? defaultRadius())));
-        if (!borderWidthInput.activeFocus) borderWidthInput.text = String(Math.round(Number(selected?.wProps?.bgBorderWidth ?? 0)));
-    }
-
-    function defaultRadius(): real {
-        if (!selected) return Tokens.rounding.large;
-        const size = WidgetRegistry.sizeFor(selected, screen.width, screen.height);
-        if (selected.wType === "image") {
-            if (selected.wVariant === "round") return Math.min(size.width, size.height) / 2;
-            if (selected.wVariant === "rounded") return Math.min(22, Math.min(size.width, size.height) / 2);
-            return 0;
-        }
-        return ["round", "analog", "materialAnalog", "lumen"].includes(selected.wVariant) ? Math.min(size.width, size.height) / 2 : Tokens.rounding.large;
-    }
-
-    Flickable {
-        id: scroll
+    ScrollView {
+        id: scroller
         anchors.fill: parent
-        anchors.margins: Tokens.padding.large
-        contentWidth: width
-        contentHeight: inspectorContent.implicitHeight
-        flickableDirection: Flickable.VerticalFlick
-        boundsBehavior: Flickable.StopAtBounds
-        clip: true
-
+        anchors.margins: 16
+        contentWidth: availableWidth
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical: SettingsScrollBar {
+            flickable: scroller.contentItem
+        }
+        SettingsScrollHandler {
+            flickable: scroller.contentItem
+        }
         ColumnLayout {
-            id: inspectorContent
-            width: scroll.width
-            spacing: Tokens.spacing.normal
-
+            width: parent.width
+            spacing: 12
+            RowLayout {
+                Layout.fillWidth: true
+                MaterialIcon {
+                    text: root.selected ? WidgetRegistry.get(root.selected.wType).icon : "tune"
+                    color: Colours.palette.m3primary
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.selected ? WidgetRegistry.get(root.selected.wType).name : qsTr("Details & layers")
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+            }
             StyledText {
                 Layout.fillWidth: true
-                text: root.selected ? WidgetRegistry.get(root.selected.wType).name : qsTr("Widgets on desktop")
-                color: Colours.palette.m3onSurface
-                font.bold: true
-                font.pointSize: Tokens.font.size.large
-                elide: Text.ElideRight
+                visible: !root.selected
+                text: root.widgets.length ? qsTr("Select a widget on the canvas or from the layers below.") : qsTr("Add a widget to customize its size, style and appearance.")
+                wrapMode: Text.WordWrap
+                color: Colours.palette.m3onSurfaceVariant
+                font.pointSize: Tokens.font.size.small
             }
-
-            Flow {
+            ColumnLayout {
                 Layout.fillWidth: true
-                spacing: Tokens.spacing.small
+                visible: !root.selected
+                spacing: 4
                 Repeater {
-                    model: root.widgets
-                    delegate: TextButton {
+                    model: root.widgets.slice().reverse()
+                    TextButton {
                         required property var modelData
-                        text: WidgetRegistry.get(modelData.wType).name
-                        type: String(modelData.wId) === String(root.selected?.wId ?? "") ? TextButton.Filled : TextButton.Text
+                        Layout.fillWidth: true
+                        text: `${WidgetRegistry.get(modelData.wType).name} · ${modelData.wVariant}`
+                        type: TextButton.Tonal
                         onClicked: root.selectionRequested(String(modelData.wId), false)
                     }
                 }
             }
-
-            StyledText { visible: !!root.selected; text: qsTr("Style"); color: Colours.palette.m3onSurfaceVariant }
-            Flow {
+            ColumnLayout {
+                Layout.fillWidth: true
                 visible: !!root.selected
-                Layout.fillWidth: true
-                spacing: Tokens.spacing.small
-                Repeater {
-                    model: root.selected ? WidgetRegistry.get(root.selected.wType).variants : []
-                    delegate: TextButton {
-                        required property string modelData
-                        text: modelData
-                        type: modelData === root.selected?.wVariant ? TextButton.Filled : TextButton.Text
-                        onClicked: if (root.selected) root.variantRequested(String(root.selected.wId), modelData)
-                    }
-                }
-            }
-
-            StyledText { visible: !!root.selected; text: qsTr("Opacity · %1%").arg(Math.round(Number(root.selected?.wOpacity ?? 1) * 100)); color: Colours.palette.m3onSurfaceVariant }
-            StyledSlider {
-                visible: !!root.selected
-                Layout.fillWidth: true
-                from: 0.15; to: 1
-                value: Number(root.selected?.wOpacity ?? 1)
-                onMoved: root.edit("wOpacity", value)
-            }
-
-            RowLayout {
-                visible: !!root.selected
-                StyledText { Layout.fillWidth: true; text: qsTr("Rotation"); color: Colours.palette.m3onSurfaceVariant }
-                IconButton { icon: "rotate_left"; onClicked: if (root.selected) root.edit("wRotation", ((root.selected.wRotation ?? 0) + 270) % 360) }
-                StyledText { text: `${root.selected?.wRotation ?? 0}°`; color: Colours.palette.m3onSurface }
-                IconButton { icon: "rotate_right"; onClicked: if (root.selected) root.edit("wRotation", ((root.selected.wRotation ?? 0) + 90) % 360) }
-                IconButton { icon: "restart_alt"; onClicked: root.edit("wRotation", 0) }
-            }
-
-            RowLayout {
-                visible: !!root.selected
-                StyledText { Layout.fillWidth: true; text: qsTr("Lock aspect ratio"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.aspectLock; onToggled: root.aspectLockRequested(checked) }
-            }
-
-            GridLayout {
-                visible: !!root.selected
-                Layout.alignment: Qt.AlignHCenter
-                columns: 3
-                Repeater {
-                    model: [
-                        { h: "left", v: "top", label: "↖" }, { h: "center", v: "top", label: "↑" }, { h: "right", v: "top", label: "↗" },
-                        { h: "left", v: "center", label: "←" }, { h: "center", v: "center", label: "•" }, { h: "right", v: "center", label: "→" },
-                        { h: "left", v: "bottom", label: "↙" }, { h: "center", v: "bottom", label: "↓" }, { h: "right", v: "bottom", label: "↘" }
-                    ]
-                    delegate: StyledRect {
-                        required property var modelData
-                        Layout.preferredWidth: 38; Layout.preferredHeight: 32
-                        radius: Tokens.rounding.small
-                        color: root.selected?.anchorH === modelData.h && root.selected?.anchorV === modelData.v ? Colours.palette.m3primaryContainer : Colours.palette.m3surface
-                        StyledText { anchors.centerIn: parent; text: parent.modelData.label; color: Colours.palette.m3onSurface }
-                        StateLayer { radius: parent.radius; onClicked: if (root.selected) root.anchorRequested(String(root.selected.wId), parent.modelData.h, parent.modelData.v) }
-                    }
-                }
-            }
-
-            RowLayout {
-                visible: !!root.selected
-                StyledText { Layout.fillWidth: true; text: qsTr("Background"); color: Colours.palette.m3onSurface; font.bold: true }
-                Switch { checked: root.selected?.wProps?.bgVisible !== false; onToggled: root.edit("bgVisible", checked) }
-            }
-
-            WidgetColorPicker {
-                visible: !!root.selected && root.selected?.wProps?.bgVisible !== false
-                Layout.fillWidth: true
-                title: qsTr("Fill color")
-                value: String(root.selected?.wProps?.bgColor ?? "")
-                fallback: Colours.palette.m3surfaceContainer
-                onColorSelected: value => root.edit("bgColor", value)
-            }
-
-            RowLayout {
-                visible: !!root.selected && root.selected?.wProps?.bgVisible !== false
-                StyledText { Layout.fillWidth: true; text: qsTr("Gradient"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.selected?.wProps?.bgGradient === true; onToggled: root.edit("bgGradient", checked) }
-            }
-            WidgetColorPicker {
-                visible: !!root.selected && root.selected?.wProps?.bgVisible !== false && root.selected?.wProps?.bgGradient === true
-                Layout.fillWidth: true
-                title: qsTr("Gradient color")
-                value: String(root.selected?.wProps?.bgColor2 ?? "primary")
-                fallback: Colours.palette.m3primaryContainer
-                onColorSelected: value => root.edit("bgColor2", value)
-            }
-
-            StyledText { visible: !!root.selected && root.selected?.wProps?.bgVisible !== false; text: qsTr("Opacity · %1%").arg(Math.round(Number(root.selected?.wProps?.bgOpacity ?? 0.82) * 100)); color: Colours.palette.m3onSurfaceVariant }
-            StyledSlider { visible: !!root.selected && root.selected?.wProps?.bgVisible !== false; Layout.fillWidth: true; from: 0; to: 1; value: Number(root.selected?.wProps?.bgOpacity ?? 0.82); onMoved: root.edit("bgOpacity", value) }
-            StyledText { visible: !!root.selected; text: qsTr("Corner radius · %1 px").arg(Math.round(Number(root.selected?.wProps?.bgRadius ?? root.defaultRadius()))); color: Colours.palette.m3onSurfaceVariant }
-            StyledSlider { visible: !!root.selected; Layout.fillWidth: true; from: 0; to: Math.max(1, Math.min(root.selected ? WidgetRegistry.sizeFor(root.selected, root.screen.width, root.screen.height).width : 1, root.selected ? WidgetRegistry.sizeFor(root.selected, root.screen.width, root.screen.height).height : 1) / 2); value: Number(root.selected?.wProps?.bgRadius ?? root.defaultRadius()); onMoved: root.edit("bgRadius", value) }
-            StyledText { visible: !!root.selected; text: qsTr("Border · %1 px").arg(Number(root.selected?.wProps?.bgBorderWidth ?? 0)); color: Colours.palette.m3onSurfaceVariant }
-            StyledSlider { visible: !!root.selected; Layout.fillWidth: true; from: 0; to: 8; value: Number(root.selected?.wProps?.bgBorderWidth ?? 0); onMoved: root.edit("bgBorderWidth", Math.round(value)) }
-            WidgetColorPicker {
-                visible: !!root.selected && Number(root.selected?.wProps?.bgBorderWidth ?? 0) > 0
-                Layout.fillWidth: true
-                title: qsTr("Border color")
-                value: String(root.selected?.wProps?.bgBorderColor ?? "")
-                fallback: Colours.palette.m3outlineVariant
-                onColorSelected: value => root.edit("bgBorderColor", value)
-            }
-
-            WidgetColorPicker {
-                visible: root.selected?.wType === "github"
-                Layout.fillWidth: true
-                title: qsTr("GitHub text color")
-                value: String(root.selected?.wProps?.textColor ?? "")
-                fallback: Colours.palette.m3onSurface
-                onColorSelected: value => root.edit("textColor", value)
-            }
-
-            StyledText { visible: root.selected?.wType === "music"; text: qsTr("Music player"); color: Colours.palette.m3onSurfaceVariant }
-            Flow {
-                visible: root.selected?.wType === "music"
-                Layout.fillWidth: true
-                spacing: Tokens.spacing.small
-                Repeater {
-                    model: [{ identity: "", label: qsTr("Follow active") }].concat(Players.list.map(player => ({ identity: Players.getIdentity(player), label: Players.getIdentity(player) })))
-                    delegate: TextButton {
-                        required property var modelData
-                        text: modelData.label
-                        type: String(root.selected?.wProps?.playerIdentity ?? "") === modelData.identity ? TextButton.Filled : TextButton.Text
-                        onClicked: root.edit("playerIdentity", modelData.identity)
-                    }
-                }
-            }
-            WidgetColorPicker {
-                visible: root.selected?.wType === "music"
-                Layout.fillWidth: true
-                title: qsTr("Text color")
-                value: String(root.selected?.wProps?.textColor ?? "")
-                fallback: Colours.palette.m3onSurface
-                onColorSelected: value => root.edit("textColor", value)
-            }
-            WidgetColorPicker {
-                visible: root.selected?.wType === "music"
-                Layout.fillWidth: true
-                title: qsTr("Accent color")
-                value: String(root.selected?.wProps?.accentColor ?? "")
-                fallback: Colours.palette.m3primary
-                onColorSelected: value => root.edit("accentColor", value)
-            }
-            RowLayout {
-                visible: root.selected?.wType === "music"
-                StyledText { Layout.fillWidth: true; text: qsTr("Album artwork"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.selected?.wProps?.showAlbumArt !== false; onToggled: root.edit("showAlbumArt", checked) }
-            }
-            RowLayout {
-                visible: root.selected?.wType === "music"
-                StyledText { Layout.fillWidth: true; text: qsTr("Playback controls"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.selected?.wProps?.showControls !== false; onToggled: root.edit("showControls", checked) }
-            }
-            RowLayout {
-                visible: root.selected?.wType === "music" && root.selected?.wVariant === "full"
-                StyledText { Layout.fillWidth: true; text: qsTr("Progress bar"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.selected?.wProps?.showProgress !== false; onToggled: root.edit("showProgress", checked) }
-            }
-            RowLayout {
-                visible: root.selected?.wType === "music" && ["full", "round"].includes(root.selected?.wVariant)
-                StyledText { Layout.fillWidth: true; text: qsTr("Audio spectrum"); color: Colours.palette.m3onSurfaceVariant }
-                Switch { checked: root.selected?.wProps?.showVisualizer !== false; onToggled: root.edit("showVisualizer", checked) }
-            }
-
-            StyledText { visible: root.selected?.wType === "music" && ["lyrics", "simpleLyrics"].includes(root.selected?.wVariant); text: qsTr("Lyrics alignment"); color: Colours.palette.m3onSurfaceVariant }
-            Flow {
-                visible: root.selected?.wType === "music" && ["lyrics", "simpleLyrics"].includes(root.selected?.wVariant)
-                Layout.fillWidth: true; spacing: Tokens.spacing.small
-                Repeater {
-                    model: ["left", "center", "right"]
-                    delegate: TextButton { required property string modelData; text: modelData; type: (root.selected?.wProps?.lyricsAlignment ?? "left") === modelData ? TextButton.Filled : TextButton.Text; onClicked: root.edit("lyricsAlignment", modelData) }
-                }
-            }
-            RowLayout {
-                visible: root.selected?.wType === "music" && root.selected?.wVariant === "simpleLyrics"
-                StyledText { Layout.fillWidth: true; text: qsTr("Lines"); color: Colours.palette.m3onSurfaceVariant }
-                IconButton { icon: "remove"; onClicked: root.edit("lyricsLines", Math.max(0, Number(root.selected?.wProps?.lyricsLines ?? 1) - 1)) }
-                StyledText { text: String(root.selected?.wProps?.lyricsLines ?? 1); color: Colours.palette.m3onSurface }
-                IconButton { icon: "add"; onClicked: root.edit("lyricsLines", Math.min(4, Number(root.selected?.wProps?.lyricsLines ?? 1) + 1)) }
-            }
-
-            RowLayout {
-                visible: !!root.selected
-                TextButton { Layout.fillWidth: true; text: qsTr("Send backward"); onClicked: if (root.selected) root.orderRequested(String(root.selected.wId), -1) }
-                TextButton { Layout.fillWidth: true; text: qsTr("Bring forward"); onClicked: if (root.selected) root.orderRequested(String(root.selected.wId), 1) }
-            }
-            RowLayout {
-                visible: !!root.selected
-                TextButton { Layout.fillWidth: true; text: qsTr("Reset size"); onClicked: if (root.selected) root.resetSizeRequested(String(root.selected.wId)) }
-                TextButton { Layout.fillWidth: true; visible: root.selected?.wType === "visualizer"; text: root.selected?.wProps?.stretchWidth ? qsTr("Fixed width") : qsTr("Stretch width"); onClicked: root.edit("stretchWidth", !root.selected?.wProps?.stretchWidth) }
-            }
-
-            StyledText { visible: root.selected?.wType === "github"; text: qsTr("GitHub username"); color: Colours.palette.m3onSurfaceVariant }
-            StyledInputField { visible: root.selected?.wType === "github"; Layout.fillWidth: true; text: root.selected?.wProps?.username ?? ""; onTextEdited: text => root.edit("username", text) }
-            StyledText { visible: root.selected?.wType === "user"; text: qsTr("Display name"); color: Colours.palette.m3onSurfaceVariant }
-            StyledInputField { visible: root.selected?.wType === "user"; Layout.fillWidth: true; text: root.selected?.wProps?.displayName ?? ""; onTextEdited: text => root.edit("displayName", text) }
-            StyledText { visible: root.selected?.wType === "image"; text: qsTr("Image file path"); color: Colours.palette.m3onSurfaceVariant }
-            RowLayout {
-                visible: root.selected?.wType === "image"
-                Layout.fillWidth: true
-
-                TextField {
-                    id: imagePathInput
+                spacing: 12
+                Flow {
                     Layout.fillWidth: true
-                    property string draftPath: ""
-                    placeholderText: qsTr("/home/…/image.png")
-                    color: Colours.palette.m3onSurfaceVariant
-                    placeholderTextColor: Colours.palette.m3outline
-                    onTextChanged: if (activeFocus) draftPath = text
-                    onAccepted: root.applyImagePath()
-                    onActiveFocusChanged: if (!activeFocus) root.syncInspectorFields()
-                    Component.onCompleted: root.syncInspectorFields()
+                    spacing: 6
+                    Repeater {
+                        model: root.selected ? WidgetRegistry.get(root.selected.wType).variants : []
+                        TextButton {
+                            required property string modelData
+                            text: modelData
+                            font.pointSize: Tokens.font.size.small
+                            type: modelData === root.selected?.wVariant ? TextButton.Filled : TextButton.Tonal
+                            onClicked: if (root.selected)
+                                root.variantRequested(String(root.selected.wId), modelData)
+                        }
+                    }
                 }
-
+                Divider {}
+                Caption {
+                    text: qsTr("Position & size")
+                }
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: 8
+                    rowSpacing: 8
+                    NumberEdit {
+                        label: "X"
+                        field: "x"
+                        current: root.position.x
+                        maximum: root.screen?.width ?? 1
+                    }
+                    NumberEdit {
+                        label: "Y"
+                        field: "y"
+                        current: root.position.y
+                        maximum: root.screen?.height ?? 1
+                    }
+                    NumberEdit {
+                        label: qsTr("Width")
+                        field: "width"
+                        current: root.size.width
+                        minimum: 1
+                        maximum: root.screen?.width ?? 1
+                    }
+                    NumberEdit {
+                        label: qsTr("Height")
+                        field: "height"
+                        current: root.size.height
+                        minimum: 1
+                        maximum: root.screen?.height ?? 1
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: root.aspectLock ? qsTr("Ratio locked") : qsTr("Lock ratio")
+                        type: root.aspectLock ? TextButton.Filled : TextButton.Tonal
+                        onClicked: root.aspectLockRequested(!root.aspectLock)
+                    }
+                    TextButton {
+                        text: qsTr("Reset size")
+                        type: TextButton.Text
+                        onClicked: if (root.selected)
+                            root.resetSizeRequested(String(root.selected.wId))
+                    }
+                }
+                Caption {
+                    text: qsTr("Anchor")
+                }
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 3
+                    rowSpacing: 4
+                    columnSpacing: 4
+                    Repeater {
+                        model: [
+                            {
+                                h: "left",
+                                v: "top",
+                                label: "↖"
+                            },
+                            {
+                                h: "center",
+                                v: "top",
+                                label: "↑"
+                            },
+                            {
+                                h: "right",
+                                v: "top",
+                                label: "↗"
+                            },
+                            {
+                                h: "left",
+                                v: "center",
+                                label: "←"
+                            },
+                            {
+                                h: "center",
+                                v: "center",
+                                label: "•"
+                            },
+                            {
+                                h: "right",
+                                v: "center",
+                                label: "→"
+                            },
+                            {
+                                h: "left",
+                                v: "bottom",
+                                label: "↙"
+                            },
+                            {
+                                h: "center",
+                                v: "bottom",
+                                label: "↓"
+                            },
+                            {
+                                h: "right",
+                                v: "bottom",
+                                label: "↘"
+                            }
+                        ]
+                        TextButton {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            text: modelData.label
+                            Accessible.name: qsTr("Anchor %1 %2").arg(modelData.v).arg(modelData.h)
+                            type: root.selected?.anchorH === modelData.h && root.selected?.anchorV === modelData.v ? TextButton.Filled : TextButton.Tonal
+                            onClicked: if (root.selected)
+                                root.anchorRequested(String(root.selected.wId), modelData.h, modelData.v)
+                        }
+                    }
+                }
+                Divider {}
+                Range {
+                    label: qsTr("Opacity")
+                    current: Number(root.selected?.wOpacity ?? 1)
+                    low: 0.15
+                    high: 1
+                    field: "wOpacity"
+                    percent: true
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    Caption {
+                        Layout.fillWidth: true
+                        text: qsTr("Rotation")
+                    }
+                    TextButton {
+                        text: "−90°"
+                        type: TextButton.Tonal
+                        onClicked: root.edit("wRotation", ((root.selected?.wRotation ?? 0) + 270) % 360)
+                    }
+                    TextButton {
+                        text: `${root.selected?.wRotation ?? 0}°`
+                        type: TextButton.Text
+                        onClicked: root.edit("wRotation", 0)
+                    }
+                    TextButton {
+                        text: "+90°"
+                        type: TextButton.Tonal
+                        onClicked: root.edit("wRotation", ((root.selected?.wRotation ?? 0) + 90) % 360)
+                    }
+                }
                 TextButton {
-                    text: qsTr("Apply")
-                    onClicked: root.applyImagePath()
+                    Layout.fillWidth: true
+                    text: root.selected?.wProps?.bgVisible === false ? qsTr("Show background") : qsTr("Hide background")
+                    type: TextButton.Tonal
+                    onClicked: root.edit("bgVisible", root.selected?.wProps?.bgVisible === false)
                 }
-            }
-            StyledText { visible: root.selected?.wType === "image"; Layout.fillWidth: true; text: qsTr("Paste an image path and press Enter to apply it."); color: Colours.palette.m3onSurfaceVariant; wrapMode: Text.WordWrap }
-            RowLayout {
-                visible: !!root.selected
-                Layout.fillWidth: true
-                StyledText { Layout.fillWidth: true; text: qsTr("Radius (px)"); color: Colours.palette.m3onSurfaceVariant }
-                TextField {
-                    id: radiusInput
-                    Layout.preferredWidth: 88
-                    property string draft: "0"
-                    color: Colours.palette.m3onSurface
-                    validator: IntValidator { bottom: 0; top: 2000 }
-                    onTextChanged: if (activeFocus) draft = text
-                    onAccepted: {
-                        const radius = Math.max(0, Number(draft) || 0);
-                        root.edit("bgRadius", radius);
-                        draft = String(radius); text = draft;
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: root.selected?.wProps?.bgVisible !== false
+                    spacing: 10
+                    Caption {
+                        text: qsTr("Background")
                     }
-                    onActiveFocusChanged: if (!activeFocus) root.syncInspectorFields()
-                    Component.onCompleted: root.syncInspectorFields()
-                }
-            }
-            RowLayout {
-                visible: !!root.selected
-                Layout.fillWidth: true
-                StyledText { Layout.fillWidth: true; text: qsTr("Border (px)"); color: Colours.palette.m3onSurfaceVariant }
-                TextField {
-                    id: borderWidthInput
-                    Layout.preferredWidth: 88
-                    property string draft: "0"
-                    color: Colours.palette.m3onSurface
-                    validator: IntValidator { bottom: 0; top: 100 }
-                    onTextChanged: if (activeFocus) draft = text
-                    onAccepted: {
-                        const borderWidth = Math.max(0, Number(draft) || 0);
-                        root.edit("bgBorderWidth", borderWidth);
-                        draft = String(borderWidth); text = draft;
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 6
+                        Repeater {
+                            model: ["surface", "primary", "secondary", "tertiary"]
+                            TextButton {
+                                required property string modelData
+                                text: modelData
+                                font.pointSize: Tokens.font.size.small
+                                type: (root.selected?.wProps?.bgColor ?? "surface") === modelData ? TextButton.Filled : TextButton.Tonal
+                                onClicked: root.edit("bgColor", modelData)
+                            }
+                        }
                     }
-                    onActiveFocusChanged: if (!activeFocus) root.syncInspectorFields()
-                    Component.onCompleted: root.syncInspectorFields()
+                    ColorEdit {
+                        label: qsTr("Custom color")
+                        field: "bgColor"
+                        current: root.selected?.wProps?.bgColor ?? "surface"
+                    }
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: root.selected?.wProps?.bgGradient ? qsTr("Gradient on") : qsTr("Gradient off")
+                        type: TextButton.Tonal
+                        onClicked: root.edit("bgGradient", !root.selected?.wProps?.bgGradient)
+                    }
+                    ColorEdit {
+                        visible: root.selected?.wProps?.bgGradient === true
+                        label: qsTr("End color")
+                        field: "bgColor2"
+                        current: root.selected?.wProps?.bgColor2 ?? "primary"
+                    }
+                    Range {
+                        label: qsTr("Background opacity")
+                        current: Number(root.selected?.wProps?.bgOpacity ?? 0.82)
+                        low: 0
+                        high: 1
+                        field: "bgOpacity"
+                        percent: true
+                    }
+                    Range {
+                        label: qsTr("Corner radius")
+                        current: Number(root.selected?.wProps?.bgRadius ?? 16)
+                        low: 0
+                        high: Math.max(1, Math.min(root.size.width, root.size.height) / 2)
+                        field: "bgRadius"
+                    }
+                    Range {
+                        label: qsTr("Border width")
+                        current: Number(root.selected?.wProps?.bgBorderWidth ?? 0)
+                        low: 0
+                        high: 8
+                        field: "bgBorderWidth"
+                    }
+                    ColorEdit {
+                        label: qsTr("Border color")
+                        field: "bgBorderColor"
+                        current: root.selected?.wProps?.bgBorderColor ?? "surface"
+                    }
+                }
+                Divider {}
+                DraftEdit {
+                    visible: ["user", "github"].includes(root.selected?.wType)
+                    label: root.selected?.wType === "github" ? qsTr("GitHub username") : qsTr("Display name")
+                    field: root.selected?.wType === "github" ? "username" : "displayName"
+                    current: root.selected?.wProps?.[field] ?? ""
+                }
+                DraftEdit {
+                    visible: root.selected?.wType === "note"
+                    label: qsTr("Note")
+                    field: "noteText"
+                    current: root.selected?.wProps?.noteText ?? ""
+                }
+                ColumnLayout {
+                    visible: root.selected?.wType === "music"
+                    Layout.fillWidth: true
+                    Caption {
+                        text: qsTr("Music")
+                    }
+                    Repeater {
+                        model: ["showAlbumArt", "showControls", "showProgress", "showVisualizer"]
+                        TextButton {
+                            required property string modelData
+                            Layout.fillWidth: true
+                            readonly property bool on: root.selected?.wProps?.[modelData] !== false
+                            text: `${on ? "✓" : "○"} ${({
+                                    showAlbumArt: qsTr("Album art"),
+                                    showControls: qsTr("Playback controls"),
+                                    showProgress: qsTr("Progress"),
+                                    showVisualizer: qsTr("Visualizer")
+                                })[modelData]}`
+                            type: TextButton.Tonal
+                            onClicked: root.edit(modelData, !on)
+                        }
+                    }
+                    Range {
+                        label: qsTr("Lyrics lines")
+                        current: Number(root.selected?.wProps?.lyricsLines ?? 1)
+                        low: 1
+                        high: 6
+                        field: "lyricsLines"
+                    }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: root.selected?.wType === "image"
+                    Image {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 100
+                        source: root.selected?.wImagePath ?? ""
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                    }
+                    DraftEdit {
+                        label: qsTr("Image path")
+                        field: "wImagePath"
+                        current: root.selected?.wImagePath ?? ""
+                    }
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: qsTr("Choose image")
+                        onClicked: if (root.selected)
+                            root.imageBrowseRequested(String(root.selected.wId))
+                    }
+                }
+                TextButton {
+                    visible: root.selected?.wType === "visualizer"
+                    Layout.fillWidth: true
+                    text: root.selected?.wProps?.stretchWidth ? qsTr("Use fixed width") : qsTr("Stretch width")
+                    type: TextButton.Tonal
+                    onClicked: root.edit("stretchWidth", !root.selected?.wProps?.stretchWidth)
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: qsTr("Backward")
+                        type: TextButton.Tonal
+                        onClicked: if (root.selected)
+                            root.orderRequested(String(root.selected.wId), -1)
+                    }
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: qsTr("Forward")
+                        type: TextButton.Tonal
+                        onClicked: if (root.selected)
+                            root.orderRequested(String(root.selected.wId), 1)
+                    }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    TextButton {
+                        Layout.fillWidth: true
+                        text: root.selected?.enabled === false ? qsTr("Show widget") : qsTr("Hide widget")
+                        type: TextButton.Tonal
+                        onClicked: root.edit("enabled", root.selected?.enabled === false)
+                    }
+                    TextButton {
+                        text: qsTr("Remove")
+                        type: TextButton.Text
+                        label.color: Colours.palette.m3error
+                        onClicked: if (root.selected)
+                            root.removeRequested(String(root.selected.wId))
+                    }
+                }
+                TextButton {
+                    Layout.fillWidth: true
+                    text: qsTr("View all layers")
+                    type: TextButton.Text
+                    onClicked: root.selectionRequested(String(root.selected?.wId ?? ""), true)
                 }
             }
-            TextButton { visible: !!root.selected; text: qsTr("Remove widget"); onClicked: if (root.selected) root.removeRequested(String(root.selected.wId)) }
+        }
+    }
+    component Caption: StyledText {
+        color: Colours.palette.m3onSurfaceVariant
+        font.pointSize: Tokens.font.size.small
+    }
+    component Divider: Rectangle {
+        Layout.fillWidth: true
+        implicitHeight: 1
+        color: Qt.alpha(Colours.palette.m3outlineVariant, 0.6)
+    }
+    component Input: TextField {
+        color: Colours.palette.m3onSurface
+        selectionColor: Colours.palette.m3primary
+        selectedTextColor: Colours.palette.m3onPrimary
+        placeholderTextColor: Colours.palette.m3onSurfaceVariant
+        font.family: Tokens.font.family.sans
+        font.pointSize: Tokens.font.size.small
+        padding: 10
+        background: Rectangle {
+            radius: 8
+            color: Colours.palette.m3surface
+            border.width: 1
+            border.color: parent.activeFocus ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+        }
+    }
+    component NumberEdit: ColumnLayout {
+        id: numberEdit
+        required property string label
+        required property string field
+        required property real current
+        property int minimum: 0
+        required property int maximum
+        Layout.fillWidth: true
+        spacing: 4
+        Caption {
+            text: numberEdit.label
+        }
+        Input {
+            Layout.fillWidth: true
+            text: String(Math.round(numberEdit.current))
+            validator: IntValidator {
+                bottom: numberEdit.minimum
+                top: Math.max(numberEdit.minimum, numberEdit.maximum)
+            }
+            onEditingFinished: {
+                if (acceptableInput && root.selected)
+                    root.geometryEdited(String(root.selected.wId), numberEdit.field, Number(text));
+                text = Qt.binding(() => String(Math.round(numberEdit.current)));
+            }
+        }
+    }
+    component Range: ColumnLayout {
+        id: range
+        required property string label
+        required property string field
+        required property real current
+        required property real low
+        required property real high
+        property bool percent: false
+        Layout.fillWidth: true
+        spacing: 4
+        RowLayout {
+            Layout.fillWidth: true
+            Caption {
+                Layout.fillWidth: true
+                text: range.label
+                elide: Text.ElideRight
+            }
+            StyledText {
+                font.pointSize: Tokens.font.size.small
+                text: range.percent ? `${Math.round(range.current * 100)}%` : String(Math.round(range.current))
+            }
+        }
+        Slider {
+            id: slider
+            Layout.fillWidth: true
+            implicitHeight: 28
+            from: range.low
+            to: Math.max(range.low + 0.001, range.high)
+            stepSize: range.percent ? 0.01 : 1
+            value: Math.max(from, Math.min(to, range.current))
+            onMoved: root.edit(range.field, range.percent ? value : Math.round(value))
+            background: Rectangle {
+                x: slider.leftPadding
+                y: (slider.height - height) / 2
+                width: Math.max(0, slider.availableWidth)
+                height: 4
+                radius: 2
+                color: Colours.palette.m3surfaceContainerHighest
+                Rectangle {
+                    width: parent.width * slider.visualPosition
+                    height: parent.height
+                    radius: 2
+                    color: Colours.palette.m3primary
+                }
+            }
+            handle: Rectangle {
+                x: slider.leftPadding + slider.visualPosition * Math.max(0, slider.availableWidth - width)
+                y: (slider.height - height) / 2
+                width: 16
+                height: 16
+                radius: 8
+                color: Colours.palette.m3primary
+                border.width: slider.activeFocus ? 2 : 0
+                border.color: Colours.palette.m3onPrimary
+            }
+        }
+    }
+    component DraftEdit: ColumnLayout {
+        id: draft
+        required property string label
+        required property string field
+        required property string current
+        Layout.fillWidth: true
+        spacing: 4
+        Caption {
+            text: draft.label
+        }
+        Input {
+            Layout.fillWidth: true
+            text: draft.current
+            onEditingFinished: {
+                root.edit(draft.field, text);
+                text = Qt.binding(() => draft.current);
+            }
+        }
+    }
+    component ColorEdit: ColumnLayout {
+        id: colorEdit
+        required property string label
+        required property string field
+        required property string current
+        Layout.fillWidth: true
+        spacing: 4
+        Caption {
+            text: colorEdit.label
+        }
+        Input {
+            Layout.fillWidth: true
+            text: colorEdit.current
+            placeholderText: "#RRGGBB"
+            validator: RegularExpressionValidator {
+                regularExpression: /#[0-9a-fA-F]{6}|surface|primary|secondary|tertiary/
+            }
+            onEditingFinished: {
+                if (acceptableInput)
+                    root.edit(colorEdit.field, text);
+                text = Qt.binding(() => colorEdit.current);
+            }
         }
     }
 }

@@ -15,18 +15,20 @@ ClippingRectangle {
 
     required property var widget
     required property ShellScreen screen
+    property bool preview: false
 
     implicitWidth: widget.wWidth ?? 250
     implicitHeight: widget.wHeight ?? 120
     width: implicitWidth
     height: implicitHeight
+    clip: true
     opacity: widget.wOpacity ?? 1
     rotation: widget.wRotation ?? 0
     color: "transparent"
     radius: backgroundRadius
 
     function fitImageAspect(imageWidth: real, imageHeight: real): void {
-        if (widget.wType !== "image" || imageWidth <= 0 || imageHeight <= 0 || !screen)
+        if (preview || widget.wType !== "image" || imageWidth <= 0 || imageHeight <= 0 || !screen)
             return;
 
         const safe = WidgetRegistry.safeArea(screen.width, screen.height, false, false);
@@ -130,6 +132,9 @@ ClippingRectangle {
             case "temp": return tempFace;
             case "disk": return diskFace;
             case "battery": return batteryFace;
+            case "workspace": return workspaceFace;
+            case "network": return networkFace;
+            case "note": return noteFace;
             case "github": return githubFace;
             case "visualizer": return visualizerFace;
             case "arch": return archFace;
@@ -193,6 +198,9 @@ ClippingRectangle {
     Component { id: tempFace; MetricFace { widget: root.widget; metric: "temp" } }
     Component { id: diskFace; MetricFace { widget: root.widget; metric: "disk" } }
     Component { id: batteryFace; BatteryFace { widget: root.widget } }
+    Component { id: workspaceFace; WorkspaceFace { widget: root.widget; screen: root.screen } }
+    Component { id: networkFace; NetworkFace { widget: root.widget } }
+    Component { id: noteFace; NoteFace { widget: root.widget; screen: root.screen } }
     Component { id: githubFace; GithubFace { widget: root.widget } }
     Component { id: visualizerFace; VisualizerFace { widget: root.widget } }
     Component {

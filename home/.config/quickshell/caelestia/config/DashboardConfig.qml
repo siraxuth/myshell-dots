@@ -27,6 +27,9 @@ JsonObject {
         readonly property int tabIndicatorSpacing: 5
         readonly property int infoWidth: 200
         readonly property int infoIconSize: 25
+        property int userWidth: 420
+        property int logoSize: 40
+        property int uptimeSize: 24
         readonly property int dateTimeWidth: 110
         readonly property int mediaWidth: 200
         readonly property int mediaProgressSweep: 180

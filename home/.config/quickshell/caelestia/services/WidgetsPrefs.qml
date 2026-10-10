@@ -12,11 +12,15 @@ Singleton {
 
     property var layouts: ({})
     property var readyScreens: ({})
+    property var histories: ({})
+    property var saveStates: ({})
+    property bool restoringHistory: false
     property bool legacyReady: false
     property var legacyWidgets: []
 
     signal layoutChanged(string screenName)
     signal layoutReady(string screenName)
+    signal retrySave(string screenName)
 
     function safeName(name: string): string {
         return String(name || "default").replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -28,11 +32,15 @@ Singleton {
 
     function normalizeImagePath(path: var): string {
         let value = String(path ?? "").trim();
-        if (!value || value.startsWith("file://")) return value;
+        if (!value || value.startsWith("file://"))
+            return value;
         const home = Quickshell.env("HOME") || "/home";
-        if (value.startsWith("~/")) return `${home}/${value.slice(2)}`;
-        if (value.startsWith("home/")) return `/${value}`;
-        if (!value.startsWith("/")) return `${home}/${value}`;
+        if (value.startsWith("~/"))
+            return `${home}/${value.slice(2)}`;
+        if (value.startsWith("home/"))
+            return `/${value}`;
+        if (!value.startsWith("/"))
+            return `${home}/${value}`;
         return value;
     }
 
@@ -51,11 +59,16 @@ Singleton {
     }
 
     function normalizeLayout(items: var): var {
-        if (!Array.isArray(items)) return [];
+        if (!Array.isArray(items))
+            return [];
         return items.map((raw, index) => {
             const item = Object.assign({}, raw ?? {});
             const rawType = item.wType ?? item.type ?? "time";
-            const type = ({ clock: "time", media: "music", visualiser: "visualizer" })[rawType] ?? rawType;
+            const type = ({
+                    clock: "time",
+                    media: "music",
+                    visualiser: "visualizer"
+                })[rawType] ?? rawType;
             const definition = WidgetRegistry.get(type);
             const rawScale = Number(item.wScale ?? item.scale ?? 1);
             const scale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
@@ -65,12 +78,16 @@ Singleton {
             const requestedVariant = item.wVariant ?? item.variant ?? definition.variant;
             const variants = definition.variants ?? [];
             const custom = Object.assign({}, item.wProps ?? {});
-            for (const key of ["username", "displayName", "textColor", "accentColor", "playerIdentity", "showAlbumArt", "showControls", "showProgress", "showVisualizer", "lyricsLines", "lyricsAlignment", "bgVisible", "bgColor", "bgColor2", "bgGradient", "bgOpacity", "bgRadius", "bgBorderColor", "bgBorderWidth", "backgroundColor", "backgroundOpacity", "backgroundRadius", "stretchWidth", "stretchHeight"]) {
-                if (item[key] !== undefined && custom[key] === undefined) custom[key] = item[key];
+            for (const key of ["username", "displayName", "noteText", "textColor", "accentColor", "playerIdentity", "showAlbumArt", "showControls", "showProgress", "showVisualizer", "lyricsLines", "lyricsAlignment", "bgVisible", "bgColor", "bgColor2", "bgGradient", "bgOpacity", "bgRadius", "bgBorderColor", "bgBorderWidth", "backgroundColor", "backgroundOpacity", "backgroundRadius", "stretchWidth", "stretchHeight"]) {
+                if (item[key] !== undefined && custom[key] === undefined)
+                    custom[key] = item[key];
             }
-            if (custom.bgColor === undefined && custom.backgroundColor !== undefined) custom.bgColor = custom.backgroundColor;
-            if (custom.bgOpacity === undefined && custom.backgroundOpacity !== undefined) custom.bgOpacity = custom.backgroundOpacity;
-            if (custom.bgRadius === undefined && custom.backgroundRadius !== undefined) custom.bgRadius = custom.backgroundRadius;
+            if (custom.bgColor === undefined && custom.backgroundColor !== undefined)
+                custom.bgColor = custom.backgroundColor;
+            if (custom.bgOpacity === undefined && custom.backgroundOpacity !== undefined)
+                custom.bgOpacity = custom.backgroundOpacity;
+            if (custom.bgRadius === undefined && custom.backgroundRadius !== undefined)
+                custom.bgRadius = custom.backgroundRadius;
             item.wId = String(item.wId ?? item.id ?? `widget_${index}_${Date.now()}`);
             item.wType = type;
             item.wVariant = variants.includes(requestedVariant) ? requestedVariant : definition.variant;
@@ -87,7 +104,72 @@ Singleton {
         });
     }
 
-    function setLayout(screenName: string, items: var): void {
+    function canUndo(name: string): bool {
+        return (histories[name]?.undo.length ?? 0) > 0;
+    }
+    function canRedo(name: string): bool {
+        return (histories[name]?.redo.length ?? 0) > 0;
+    }
+    function setSaveState(name: string, state: string): void {
+        const next = Object.assign({}, saveStates);
+        next[name] = state;
+        saveStates = next;
+    }
+    function undo(name: string): void {
+        restoreHistory(name, false);
+    }
+    function redo(name: string): void {
+        restoreHistory(name, true);
+    }
+    function restoreHistory(name: string, redo: bool): void {
+        const h = histories[name];
+        if (!h || !(redo ? h.redo : h.undo).length)
+            return;
+        const undoStack = h.undo.slice();
+        const redoStack = h.redo.slice();
+        const source = redo ? redoStack : undoStack;
+        (redo ? undoStack : redoStack).push(JSON.stringify(layoutFor(name)));
+        const layout = JSON.parse(source.pop());
+        const next = Object.assign({}, histories);
+        next[name] = {
+            undo: undoStack.slice(-50),
+            redo: redoStack.slice(-50),
+            key: "",
+            time: 0
+        };
+        histories = next;
+        restoringHistory = true;
+        setLayout(name, layout);
+        restoringHistory = false;
+    }
+
+    function setLayout(screenName: string, items: var, historyKey: string): void {
+        if (!isReady(screenName))
+            return;
+        const before = JSON.stringify(layoutFor(screenName));
+        if (before === JSON.stringify(items))
+            return;
+        if (!restoringHistory) {
+            const previous = histories[screenName] ?? {
+                undo: [],
+                redo: [],
+                key: "",
+                time: 0
+            };
+            const stack = previous.undo.slice();
+            const now = Date.now();
+            if (!historyKey || previous.key !== historyKey || now - previous.time > 600)
+                stack.push(before);
+            const history = Object.assign({}, histories);
+            history[screenName] = {
+                undo: stack.slice(-50),
+                redo: [],
+                key: historyKey,
+                time: now
+            };
+            histories = history;
+        }
+        setSaveState(screenName, "saving");
         const nextLayouts = Object.assign({}, layouts);
         nextLayouts[screenName] = Array.isArray(items) ? items : [];
         layouts = nextLayouts;
@@ -108,23 +190,46 @@ Singleton {
         if (index < 0)
             return;
         Object.assign(items[index], fields);
-        setLayout(screenName, items);
+        setLayout(screenName, items, `${id}:${Object.keys(fields).join(",")}`);
     }
 
     function storedPosition(screenName: string, x: real, y: real): var {
         const screen = Quickshell.screens.find(entry => entry.name === screenName);
-        const safe = screen ? WidgetRegistry.safeArea(screen.width, screen.height, false, false) : { x: 0, y: 0 };
-        return { wX: Math.round(x - safe.x), wY: Math.round(y - safe.y) };
+        const safe = screen ? WidgetRegistry.safeArea(screen.width, screen.height, false, false) : {
+            x: 0,
+            y: 0
+        };
+        return {
+            wX: Math.round(x - safe.x),
+            wY: Math.round(y - safe.y)
+        };
     }
 
     function setWidgetPosition(screenName: string, id: string, x: real, y: real, width: real, height: real): void {
         const item = layoutFor(screenName).find(entry => String(entry.wId) === String(id));
-        if (!item) return;
+        if (!item)
+            return;
         updateWidgetFields(screenName, id, Object.assign(storedPosition(screenName, x, y), {
-            wWidth: Math.round(width), wHeight: Math.round(height),
-            wProps: Object.assign({}, item.wProps ?? {}, { stretchWidth: false, stretchHeight: false }),
-            stretchWidth: false, stretchHeight: false,
-            anchor: "", anchors: "", anchorH: "", anchorV: "", anchorX: "", anchorY: "", horizontalAnchor: "", verticalAnchor: "", hAnchor: "", vAnchor: "", anchorHorizontal: "", anchorVertical: ""
+            wWidth: Math.round(width),
+            wHeight: Math.round(height),
+            wProps: Object.assign({}, item.wProps ?? {}, {
+                stretchWidth: false,
+                stretchHeight: false
+            }),
+            stretchWidth: false,
+            stretchHeight: false,
+            anchor: "",
+            anchors: "",
+            anchorH: "",
+            anchorV: "",
+            anchorX: "",
+            anchorY: "",
+            horizontalAnchor: "",
+            verticalAnchor: "",
+            hAnchor: "",
+            vAnchor: "",
+            anchorHorizontal: "",
+            anchorVertical: ""
         }));
     }
 
@@ -132,18 +237,26 @@ Singleton {
         const safe = WidgetRegistry.safeArea(screenWidth, screenHeight, false, false);
         const offsetX = horizontal === "right" ? safe.x + safe.width - width - x : horizontal === "center" ? x - (safe.x + (safe.width - width) / 2) : x - safe.x;
         const offsetY = vertical === "bottom" ? safe.y + safe.height - height - y : vertical === "center" ? y - (safe.y + (safe.height - height) / 2) : y - safe.y;
-        updateWidgetFields(screenName, id, { anchor: "", anchorH: horizontal, anchorV: vertical, wX: Math.round(offsetX), wY: Math.round(offsetY) });
+        updateWidgetFields(screenName, id, {
+            anchor: "",
+            anchorH: horizontal,
+            anchorV: vertical,
+            wX: Math.round(offsetX),
+            wY: Math.round(offsetY)
+        });
     }
 
     function updateWidgetProperty(screenName: string, id: string, key: string, value: var): void {
         if (!isReady(screenName))
             return;
-        const items = layoutFor(screenName).map(item => Object.assign({}, item, { wProps: Object.assign({}, item.wProps ?? {}) }));
+        const items = layoutFor(screenName).map(item => Object.assign({}, item, {
+                wProps: Object.assign({}, item.wProps ?? {})
+            }));
         const index = items.findIndex(item => String(item.wId) === String(id));
         if (index < 0)
             return;
         items[index].wProps[key] = value;
-        setLayout(screenName, items);
+        setLayout(screenName, items, `${id}:props:${key}`);
     }
 
     function setVariant(screenName: string, id: string, variant: string): void {
@@ -153,7 +266,11 @@ Singleton {
         if (!item)
             return;
         const size = WidgetRegistry.constrainSize(item.wType, variant, Number(item.wWidth ?? 250), Number(item.wHeight ?? 120), false);
-        const fields = { wVariant: variant, wWidth: size.w, wHeight: size.h };
+        const fields = {
+            wVariant: variant,
+            wWidth: size.w,
+            wHeight: size.h
+        };
         updateWidgetFields(screenName, id, fields);
     }
 
@@ -190,7 +307,8 @@ Singleton {
     }
 
     function clearWidgets(screenName: string): void {
-        if (!isReady(screenName)) return;
+        if (!isReady(screenName))
+            return;
         setLayout(screenName, []);
     }
 
@@ -210,24 +328,39 @@ Singleton {
 
     function migrateLegacy(): var {
         const positionMap = {
-            "top-left": "top left", "top-center": "top center", "top-right": "top right",
-            "middle-left": "center left", "middle-center": "center", "middle-right": "center right",
-            "bottom-left": "bottom left", "bottom-center": "bottom center", "bottom-right": "bottom right"
+            "top-left": "top left",
+            "top-center": "top center",
+            "top-right": "top right",
+            "middle-left": "center left",
+            "middle-center": "center",
+            "middle-right": "center right",
+            "bottom-left": "bottom left",
+            "bottom-center": "bottom center",
+            "bottom-right": "bottom right"
         };
         const converted = legacyWidgets.map((item, index) => {
             const legacyType = item.wType ?? item.type ?? "clock";
-            const type = ({ clock: "time", media: "music", visualiser: "visualizer" })[legacyType] ?? legacyType;
+            const type = ({
+                    clock: "time",
+                    media: "music",
+                    visualiser: "visualizer"
+                })[legacyType] ?? legacyType;
             const def = WidgetRegistry.get(type);
             const rawScale = Number(item.wScale ?? item.scale ?? 1);
             const scale = Number.isFinite(rawScale) ? Math.max(0.5, Math.min(2.5, rawScale)) : 1;
             const props = Object.assign({}, item.wProps ?? {});
-            for (const key of ["username", "displayName", "textColor", "accentColor", "playerIdentity", "showAlbumArt", "showControls", "showProgress", "showVisualizer", "lyricsLines", "lyricsAlignment", "bgColor", "bgColor2", "bgGradient", "bgOpacity", "bgRadius", "bgBorderColor", "bgBorderWidth", "backgroundColor", "backgroundOpacity", "backgroundRadius", "stretchWidth", "stretchHeight"]) {
-                if (item[key] !== undefined && props[key] === undefined) props[key] = item[key];
+            for (const key of ["username", "displayName", "noteText", "textColor", "accentColor", "playerIdentity", "showAlbumArt", "showControls", "showProgress", "showVisualizer", "lyricsLines", "lyricsAlignment", "bgColor", "bgColor2", "bgGradient", "bgOpacity", "bgRadius", "bgBorderColor", "bgBorderWidth", "backgroundColor", "backgroundOpacity", "backgroundRadius", "stretchWidth", "stretchHeight"]) {
+                if (item[key] !== undefined && props[key] === undefined)
+                    props[key] = item[key];
             }
-            if (props.bgColor === undefined && typeof item.background === "string") props.bgColor = item.background;
-            if (props.bgColor === undefined && props.backgroundColor !== undefined) props.bgColor = props.backgroundColor;
-            if (props.bgOpacity === undefined && props.backgroundOpacity !== undefined) props.bgOpacity = props.backgroundOpacity;
-            if (props.bgRadius === undefined && props.backgroundRadius !== undefined) props.bgRadius = props.backgroundRadius;
+            if (props.bgColor === undefined && typeof item.background === "string")
+                props.bgColor = item.background;
+            if (props.bgColor === undefined && props.backgroundColor !== undefined)
+                props.bgColor = props.backgroundColor;
+            if (props.bgOpacity === undefined && props.backgroundOpacity !== undefined)
+                props.bgOpacity = props.backgroundOpacity;
+            if (props.bgRadius === undefined && props.backgroundRadius !== undefined)
+                props.bgRadius = props.backgroundRadius;
             props.bgVisible = (typeof item.background === "boolean" ? item.background : true) && item.bgVisible !== false && props.bgVisible !== false;
             return {
                 wId: String(item.wId ?? item.id ?? `legacy_${index}_${legacyType}`),

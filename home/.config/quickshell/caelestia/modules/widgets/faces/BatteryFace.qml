@@ -43,14 +43,18 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth: true
                     StyledText {
+                        Layout.fillWidth: true
                         text: UPower.displayDevice.isLaptopBattery ? `${Math.round(root.percentage * 100)}%` : qsTr("No battery detected")
                         color: Colours.palette.m3onSurface
                         font.bold: true
+                        elide: Text.ElideRight
                     }
                     StyledText {
+                        Layout.fillWidth: true
                         text: root.remainingTime || root.batteryState
                         color: Colours.palette.m3onSurfaceVariant
                         font.pointSize: Tokens.font.size.small
+                        elide: Text.ElideRight
                     }
                 }
             }

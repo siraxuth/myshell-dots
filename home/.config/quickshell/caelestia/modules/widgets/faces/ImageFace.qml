@@ -64,7 +64,7 @@ Item {
             width: parent.width - 24
             text: root.widget.wImagePath
                 ? qsTr("Image could not be loaded")
-                : qsTr("Set an image path in the inspector")
+                : qsTr("Choose an image in the editor")
             color: "#e6e1e5"
             font.pixelSize: 13
             horizontalAlignment: Text.AlignHCenter

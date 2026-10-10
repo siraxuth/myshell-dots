@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 Singleton {
     id: root
@@ -14,6 +15,16 @@ Singleton {
         screenName = screen || (Quickshell.screens.length ? Quickshell.screens[0].name : "");
         selectedWidgetId = widgetId || "";
         active = true;
+    }
+
+    IpcHandler {
+        target: "widgetEditor"
+        function open(screenName: string): void {
+            root.open(screenName, "");
+        }
+        function close(): void {
+            root.close();
+        }
     }
 
     function close(): void {

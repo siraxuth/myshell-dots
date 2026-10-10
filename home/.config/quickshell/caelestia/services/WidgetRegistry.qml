@@ -23,6 +23,9 @@ QtObject {
         temp: { name: qsTr("Temperature"), icon: "device_thermostat", size: [180, 130], variant: "default", variants: ["default"] },
         disk: { name: qsTr("Disk"), icon: "storage", size: [180, 130], variant: "default", variants: ["default"] },
         battery: { name: qsTr("Battery"), icon: "battery_full", size: [260, 90], variant: "default", variants: ["default"] },
+        workspace: { name: qsTr("Workspaces"), icon: "view_quilt", size: [390, 150], variant: "default", variants: ["default"] },
+        network: { name: qsTr("Network"), icon: "wifi", size: [300, 140], variant: "default", variants: ["default"] },
+        note: { name: qsTr("Notes"), icon: "sticky_note_2", size: [300, 200], variant: "default", variants: ["default"] },
         github: { name: "GitHub", icon: "code", size: [540, 180], variant: "default", variants: ["default"] },
         // Compatibility faces preserve existing Caelestia layouts through migration.
         arch: { name: qsTr("Arch"), icon: "star", size: [420, 420], variant: "default", variants: ["default"] },
@@ -104,7 +107,7 @@ QtObject {
     }
 
     function safeArea(screenWidth: real, screenHeight: real, stretchWidth: bool, stretchHeight: bool): var {
-        const barInset = Config.border.thickness + Tokens.sizes.bar.innerWidth;
+        const barInset = GlobalConfig.border.thickness + TokenConfig.sizes.bar.innerWidth;
         const safeLeft = stretchWidth || !BarPosition.isLeft(BarPositionPrefs.position) ? 0 : barInset;
         const safeRight = stretchWidth || !BarPosition.isRight(BarPositionPrefs.position) ? 0 : barInset;
         const safeTop = stretchHeight || !BarPosition.isTop(BarPositionPrefs.position) ? 0 : barInset;
