@@ -58,6 +58,7 @@ StyledWindow {
         visibilities.launcher = false;
         visibilities.session = false;
         visibilities.dashboard = false;
+        visibilities.capture = false;
         visibilities.liveWallpaper = false;
         panels.popouts.close();
     }
@@ -65,7 +66,7 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || panels.dashboard.needsKeyboard || panels.liveWallpaper.needsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || panels.dashboard.needsKeyboard || panels.liveWallpaper.needsKeyboard || panels.capture.needsKeyboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -105,7 +106,7 @@ StyledWindow {
     HyprlandFocusGrab {
         id: focusGrab
 
-        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || visibilities.liveWallpaper || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || visibilities.liveWallpaper || visibilities.capture || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
         windows: [root]
         onCleared: {
             visibilities.launcher = false;
@@ -113,6 +114,7 @@ StyledWindow {
             visibilities.sidebar = false;
             visibilities.dashboard = false;
             visibilities.liveWallpaper = false;
+            visibilities.capture = false;
             panels.popouts.hasCurrent = false;
             bar.closeTray();
         }
@@ -178,6 +180,13 @@ StyledWindow {
             id: liveWallpaperBg
 
             panel: panels.liveWallpaper
+            deformAmount: 0.1
+        }
+
+        PanelBg {
+            id: captureBg
+
+            panel: panels.capture
             deformAmount: 0.1
         }
 
@@ -281,6 +290,9 @@ StyledWindow {
             }
             liveWallpaper.transform: Matrix4x4 {
                 matrix: liveWallpaperBg.deformMatrix
+            }
+            capture.transform: Matrix4x4 {
+                matrix: captureBg.deformMatrix
             }
             session.transform: Matrix4x4 {
                 matrix: sessionBg.deformMatrix
