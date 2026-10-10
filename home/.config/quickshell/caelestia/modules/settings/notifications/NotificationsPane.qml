@@ -76,10 +76,14 @@ Item {
         StyledFlickable {
             id: notificationsFlickable
 
+            SettingsScrollHandler {
+                flickable: notificationsFlickable
+            }
+
             flickableDirection: Flickable.VerticalFlick
             contentHeight: notificationsLayout.height
 
-            StyledScrollBar.vertical: StyledScrollBar {
+            SettingsScrollBar.vertical: SettingsScrollBar {
                 flickable: notificationsFlickable
             }
 
@@ -195,6 +199,80 @@ Item {
                     }
 
                     NotificationSoundControls {}
+
+                    SectionContainer {
+                        Layout.fillWidth: true
+                        alignTop: true
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: qsTr("Notification inbox")
+                                font.pointSize: Tokens.font.size.normal
+                            }
+                            TextButton {
+                                text: qsTr("Clear")
+                                type: TextButton.Text
+                                enabled: Notifs.notClosed.length > 0
+                                onClicked: Notifs.clear()
+                            }
+                        }
+
+                        Repeater {
+                            model: Notifs.notClosed
+
+                            RowLayout {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                spacing: Tokens.spacing.small
+
+                                MaterialIcon {
+                                    text: "notifications"
+                                    color: Colours.palette.m3primary
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        text: modelData.summary || qsTr("Notification")
+                                        elide: Text.ElideRight
+                                        font.weight: Font.Medium
+                                    }
+                                    StyledText {
+                                        Layout.fillWidth: true
+                                        text: `${modelData.appName || ""}${modelData.body ? ` · ${modelData.body}` : ""}`
+                                        color: Colours.palette.m3onSurfaceVariant
+                                        maximumLineCount: 2
+                                        wrapMode: Text.Wrap
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                IconButton {
+                                    icon: "close"
+                                    Accessible.name: qsTr("Dismiss notification")
+                                    onClicked: modelData.close()
+                                }
+                            }
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            visible: Notifs.notClosed.length > 0
+                            text: qsTr("These are saved until dismissed or expired; closed notifications are not archived.")
+                            color: Colours.palette.m3onSurfaceVariant
+                            font.pointSize: Tokens.font.size.small
+                            wrapMode: Text.WordWrap
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            visible: Notifs.notClosed.length === 0
+                            text: qsTr("No active notifications.")
+                            color: Colours.palette.m3onSurfaceVariant
+                        }
+                    }
                 }
 
                 ColumnLayout {
