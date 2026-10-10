@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-10T13:20:00+07:00",
+  "title": "Design System: Caelestia",
+  "extensions": {
+    "colorMeta": {
+      "rose-primary": { "role": "primary", "displayName": "Rose Primary", "canonical": "#ffb0ca", "tonalRamp": ["#2b0014", "#440020", "#5e002d", "#790039", "#950047", "#b45478", "#d17d9e", "#efabc5"] },
+      "rose-primary-container": { "role": "primary-container", "displayName": "Rose Container", "canonical": "#6f334a", "tonalRamp": ["#260c16", "#3d1826", "#542436", "#6f334a", "#8d4c64", "#ab657e", "#ca819b", "#e9a0b7"] },
+      "warm-secondary": { "role": "secondary", "displayName": "Warm Secondary", "canonical": "#e2bdc7", "tonalRamp": ["#211116", "#39232a", "#52343d", "#6d4751", "#895b67", "#a67481", "#c39aa6", "#e2bdc7"] },
+      "peach-tertiary": { "role": "tertiary", "displayName": "Peach Tertiary", "canonical": "#f0bc95", "tonalRamp": ["#261306", "#41230f", "#5d3419", "#794725", "#965b31", "#b6774e", "#d49a70", "#f0bc95"] },
+      "surface": { "role": "surface", "displayName": "Night Surface", "canonical": "#191114", "tonalRamp": ["#130c0e", "#191114", "#22191c", "#261d20", "#31282a", "#3c3235", "#514347", "#efdfe2"] },
+      "error-container": { "role": "error", "displayName": "Error Container", "canonical": "#93000a", "tonalRamp": ["#410002", "#690005", "#93000a", "#ba1a1a", "#de3730", "#ff5449", "#ff897d", "#ffdad6"] },
+      "success-container": { "role": "success", "displayName": "Forest Success Container", "canonical": "#374B3E", "tonalRamp": ["#0c1f16", "#182c21", "#24392c", "#374b3e", "#526657", "#6d816f", "#8a9e8c", "#b5ccba"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Rubik Display", "purpose": "Primary tool headings." },
+      "body": { "displayName": "Rubik", "purpose": "Readable compact shell labels and descriptions." },
+      "mono": { "displayName": "CaskaydiaCove NF", "purpose": "Fixed-width command details when useful." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "shell-standard", "value": "Tokens.anim.curves.standard; Tokens.anim.durations.normal", "purpose": "Shared restrained transitions for control state changes." },
+      { "name": "shell-fast", "value": "Tokens.anim.curves.standardDecel; Tokens.anim.durations.small", "purpose": "Quick hover and pressed feedback." }
+    ],
+    "breakpoints": [
+      { "name": "compact-display", "value": "available screen width minus 32px", "purpose": "Keep the centered panel inside smaller displays." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Filled Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "High emphasis action using the active primary role.",
+      "html": "<button class=\"ds-button\">End task</button>",
+      "css": ".ds-button { background: #ffb0ca; color: #541d34; padding: 10px 15px; border: 0; border-radius: 999px; font: 500 13px Rubik, sans-serif; transition: filter 160ms ease, transform 160ms ease; } .ds-button:hover { filter: brightness(1.08); } .ds-button:focus-visible { outline: 2px solid #efdfe2; outline-offset: 2px; } .ds-button:active { transform: scale(.98); }"
+    },
+    {
+      "name": "Tonal Button",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Secondary action or selected tab on a tinted surface.",
+      "html": "<button class=\"ds-button-tonal\">Startup apps</button>",
+      "css": ".ds-button-tonal { background: #6f334a; color: #ffd9e3; padding: 10px 15px; border: 0; border-radius: 999px; font: 500 13px Rubik, sans-serif; transition: filter 160ms ease; } .ds-button-tonal:hover { filter: brightness(1.12); } .ds-button-tonal:focus-visible { outline: 2px solid #efdfe2; outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "field-search",
+      "description": "Tonal search field for process or startup filtering.",
+      "html": "<input class=\"ds-search\" aria-label=\"Search processes\" placeholder=\"Search name, command or PID\">",
+      "css": ".ds-search { width: 100%; background: #31282a; color: #efdfe2; padding: 10px 12px; border: 1px solid #514347; border-radius: 12px; font: 400 13px Rubik, sans-serif; } .ds-search::placeholder { color: #d5c2c6; opacity: 1; } .ds-search:focus-visible { outline: 2px solid #ffb0ca; outline-offset: 1px; }"
+    },
+    {
+      "name": "Surface Row",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "Grouped content row with tonal elevation and clear text hierarchy.",
+      "html": "<article class=\"ds-row\"><strong>firefox</strong><span>PID 4821 · 1.2 GB</span></article>",
+      "css": ".ds-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #31282a; color: #efdfe2; padding: 12px; border: 1px solid #514347; border-radius: 12px; font: 400 13px Rubik, sans-serif; } .ds-row span { color: #d5c2c6; font-size: 11px; }"
+    },
+    {
+      "name": "Running Chip",
+      "kind": "chip",
+      "refersTo": "status-running",
+      "description": "Textual running state shown beside a startup entry.",
+      "html": "<span class=\"ds-chip\">Running</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; background: #374b3e; color: #b5ccba; padding: 4px 8px; border-radius: 999px; font: 500 11px Rubik, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Focused Control Room",
+    "overview": "Caelestia is a desktop toolset for quick, confident decisions. Its interface uses compact groups, clear labels, and the wallpaper-aware Material palette already active in the shell. Tonal surfaces create depth while rounded edges and consistent spacing keep the many control panels related. Motion is restrained and state-led: a control responds when it changes, while the surrounding layout stays still.",
+    "keyCharacteristics": ["Live Material roles with warm default fallback tones.", "Tonal depth and fine outlines instead of decorative shadows.", "Compact, keyboard-friendly layouts with clear state labels."],
+    "rules": [
+      { "name": "The Live Palette Rule", "body": "Use Colours.palette roles in QML. Hex values describe fallback colors, not replacements for live theme bindings.", "section": "colors" },
+      { "name": "The Tonal Depth Rule", "body": "Keep surfaces flat at rest and communicate hierarchy through Material surface roles, a 1px outline, and component spacing.", "section": "elevation" }
+    ],
+    "dos": ["Do bind surfaces and text to Colours.palette roles so wallpaper themes remain live.", "Do use Tokens.rounding and Tokens.spacing for consistent corners and rhythm.", "Do use accessible labels and a visible textual state alongside color.", "Do request graceful process shutdown before exposing a separate force action."],
+    "donts": ["Don't visually imitate Windows or introduce a second design language.", "Don't use fixed palette colors for themed QML surfaces.", "Don't use shadows to create depth in otherwise tonal shell panels.", "Don't show an unavailable startup source as an active switch."]
+  }
+}

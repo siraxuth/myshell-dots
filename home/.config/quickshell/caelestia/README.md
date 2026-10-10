@@ -31,6 +31,7 @@ This configuration is intended to run with:
 
 - Linux with **Hyprland**
 - **Quickshell** and the Caelestia services/modules used by this shell
+- **M3Shapes** QML module (`qt6-m3shapes-git` on Arch) for expressive profile shapes and masking
 - A working user session with the desktop services you want to control, such as NetworkManager, PipeWire/WirePlumber, Bluetooth, and UPower
 
 Some controls depend on the corresponding system service and permissions being available. The shell does not replace those services.
@@ -82,3 +83,16 @@ Select a widget to edit its available options. Music widgets can follow the acti
 ## License
 
 See [LICENSE](LICENSE).
+
+## Desktop canvas
+
+Control Center → Widgets uses the shared `PaneFrame`, including its inner border and rounding. “Arrange desktop · Full screen” opens a Wayland overlay covering the selected monitor at its native logical size. The editor and Control Center preview share `WidgetWorkspace`; geometry is stored in desktop coordinates.
+
+- Select with a click; Ctrl+click selects more. Drag or use arrow keys (Shift moves 10 pixels).
+- Ctrl+A selects all; Delete removes the selection; Ctrl+Z / Ctrl+Shift+Z undo and redo.
+- F6 hides/shows editor tools; Escape returns from focus mode or closes the editor.
+- Calm, Studio and Monitor offer a preview before replacing a monitor’s layout. Replacement can be undone.
+- Layouts save automatically per monitor. The inspector exposes saving failures and a retry action.
+- IPC: `qs ipc -c caelestia call widgetEditor open eDP-1` and `qs ipc -c caelestia call widgetEditor close`.
+
+History holds 50 snapshots per monitor for the current shell session. The existing layout JSON format is retained.

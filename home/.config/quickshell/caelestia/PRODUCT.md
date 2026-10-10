@@ -10,7 +10,7 @@ The primary user is the owner of this Hyprland laptop. They use Caelestia Contro
 
 ## Product Purpose
 
-Caelestia is the desktop shell and settings surface for this machine. Settings should expose the effective system behaviour, persist locally, react to hardware state such as AC power and monitor connections, and remain understandable without Linux power-management knowledge.
+Caelestia is the desktop shell and settings surface for this machine. Settings should expose the effective system behaviour, persist locally, react to hardware state such as AC power and monitor connections, and remain understandable without Linux power-management knowledge. The Task Manager extends this control room with a clear view of running processes and startup behaviour.
 
 ## Brand Personality
 
