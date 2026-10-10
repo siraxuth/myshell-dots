@@ -36,11 +36,16 @@ Item {
     property bool listingFiles: false
     property bool deleting: false
     property bool clearingCache: false
+    property bool clearingTrash: false
     property bool inspectingApp: false
     property bool confirmDelete: false
     property bool confirmCacheClear: false
+    property bool confirmTrashClear: false
     property bool confirmUninstall: false
+    property bool initialized: false
+    property bool userSelectedMount: false
 
+    readonly property bool paneActive: session.active === "storage" || session.active === "Storage" || session.activeIndex === PaneRegistry.getIndexById("storage")
     readonly property var activeDisk: disks.find(disk => disk.mount === selectedMount) ?? disks[0] ?? null
     readonly property real usedRatio: activeDisk?.total > 0 ? Math.min(1, activeDisk.used / activeDisk.total) : 0
     readonly property var visibleFiles: {
@@ -66,12 +71,20 @@ Item {
         return `${(value / Math.pow(1024, unit)).toFixed(unit > 0 ? 1 : 0)} ${units[unit]}`;
     }
 
-    function refresh(): void {
+    function refresh(preserveMessage = false): void {
         if (diskProcess.running)
             return;
-        root.errorText = "";
+        if (!preserveMessage)
+            root.errorText = "";
         root.refreshing = true;
         diskProcess.exec({ command: ["df", "-P", "-B1", "-x", "tmpfs", "-x", "devtmpfs", "-x", "squashfs"] });
+    }
+
+    function initializePane(): void {
+        if (!root.paneActive || root.initialized)
+            return;
+        root.initialized = true;
+        root.refresh();
     }
 
     function scanCategories(): void {
@@ -210,22 +223,37 @@ Item {
         cacheProcess.exec({ command: ["ionice", "-c", "3", "nice", "-n", "19", "python3", "-c", "import os,shutil; p=os.path.expanduser('~/.cache'); [shutil.rmtree(os.path.join(p,n),ignore_errors=True) if os.path.isdir(os.path.join(p,n)) and not os.path.islink(os.path.join(p,n)) else os.unlink(os.path.join(p,n)) for n in os.listdir(p)] if os.path.isdir(p) and not os.path.islink(p) else None"] });
     }
 
+    function emptyTrash(): void {
+        root.confirmTrashClear = false;
+        root.clearingTrash = true;
+        root.errorText = "";
+        trashProcess.exec({ command: ["python3", `${Quickshell.shellDir}/modules/settings/storage/trash.py`, "empty"] });
+    }
+
     readonly property string categoryScanner: `import json, os, subprocess, sys
 mount = sys.argv[1]
 try:
     mount_dev = os.stat(mount).st_dev
 except OSError:
     mount_dev = None
+home = os.path.expanduser('~')
+xdg_dirs = {}
+try:
+    with open(os.path.expanduser('~/.config/user-dirs.dirs'), 'r') as stream:
+        for line in stream:
+            if '=' not in line: continue
+            key, value = line.split('=', 1)
+            value = value.strip().strip('"').replace('$HOME', home)
+            xdg_dirs[key.removeprefix('XDG_').removesuffix('_DIR')] = value
+except OSError:
+    pass
 def xdg(key, fallback):
-    try:
-        value = subprocess.run(['xdg-user-dir', key], capture_output=True, text=True, timeout=2).stdout.strip()
-        if value and os.path.isdir(value): return value
-    except Exception: pass
+    value = xdg_dirs.get(key)
+    if value and os.path.isdir(value): return value
     return os.path.expanduser(fallback)
 defs = [
     ('Programs', 'apps', ['/usr/share/applications', os.path.expanduser('~/.local/share/applications')]),
     ('Downloads', 'download', [xdg('DOWNLOAD', '~/Downloads')]),
-    ('Desktop', 'desktop_windows', [xdg('DESKTOP', '~/Desktop')]),
     ('Videos', 'movie', [xdg('VIDEOS', '~/Videos')]),
     ('Pictures', 'image', [xdg('PICTURES', '~/Pictures')]),
     ('Music', 'music_note', [xdg('MUSIC', '~/Music')]),
@@ -236,20 +264,25 @@ defs = [
 result = []
 for name, icon, candidates in defs:
     paths = []
-    size = 0
     for path in candidates:
         if not os.path.exists(path): continue
         try:
             if mount_dev is not None and os.stat(path).st_dev != mount_dev: continue
             paths.append(path)
+        except Exception: pass
+    if paths: result.append({'name': name, 'icon': icon, 'paths': paths, 'size': 0, 'sizePending': True})
+result.sort(key=lambda category: category['name'].lower())
+print(json.dumps({'type': 'initial', 'categories': result}), flush=True)
+for category in result:
+    size = 0
+    for path in category['paths']:
+        try:
             cmd = ['ionice', '-c', '3', 'nice', '-n', '19', 'du', '-sx', '-B1', '--', path]
             done = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-            if done.returncode == 0:
-                size += int(done.stdout.split()[0])
+            if done.returncode == 0: size += int(done.stdout.split()[0])
         except Exception: pass
-    if paths: result.append({'name': name, 'icon': icon, 'paths': paths, 'size': size})
-result.sort(key=lambda category: category['size'], reverse=True)
-print(json.dumps(result))`
+    print(json.dumps({'type': 'size', 'name': category['name'], 'size': size}), flush=True)
+print(json.dumps({'type': 'done'}), flush=True)`
 
     readonly property string fileScanner: `import json, os, subprocess, sys
 paths = json.loads(sys.argv[1])
@@ -313,7 +346,8 @@ if directories:
 items.sort(key=lambda item: item['size'], reverse=True)
 print(json.dumps(items))`
 
-    Component.onCompleted: root.refresh()
+    Component.onCompleted: Qt.callLater(root.initializePane)
+    onPaneActiveChanged: root.initializePane()
 
     Process {
         id: diskProcess
@@ -339,6 +373,12 @@ print(json.dumps(items))`
                 parsed.sort((a, b) => a.mount === "/" ? -1 : b.mount === "/" ? 1 : a.mount.localeCompare(b.mount));
                 root.disks = parsed;
                 root.refreshing = false;
+                if (!root.userSelectedMount) {
+                    const home = Quickshell.env("HOME") || "";
+                    const homeDisk = parsed.filter(disk => home === disk.mount || home.startsWith(disk.mount.endsWith("/") ? disk.mount : `${disk.mount}/`)).sort((a, b) => b.mount.length - a.mount.length)[0];
+                    if (homeDisk)
+                        root.selectedMount = homeDisk.mount;
+                }
                 if (!parsed.some(disk => disk.mount === root.selectedMount))
                     root.selectedMount = parsed.find(disk => disk.mount === "/")?.mount ?? parsed[0]?.mount ?? "/";
                 if (parsed.length > 0)
@@ -356,15 +396,28 @@ print(json.dumps(items))`
 
     Process {
         id: categoryProcess
-        stdout: StdioCollector {
-            onStreamFinished: {
+        stdout: SplitParser {
+            onRead: line => {
                 try {
-                    root.categories = JSON.parse(text.trim());
+                    const message = JSON.parse(line);
+                    if (message.type === "initial") {
+                        root.categories = message.categories ?? [];
+                        root.errorText = "";
+                    } else if (message.type === "size") {
+                        root.categories = root.categories.map(category => {
+                            if (category.name !== message.name)
+                                return category;
+                            const updated = Object.assign({}, category);
+                            updated.size = message.size;
+                            updated.sizePending = false;
+                            return updated;
+                        });
+                    } else if (message.type === "done") {
+                        root.scanning = false;
+                    }
                 } catch (error) {
-                    root.categories = [];
-                    root.errorText = qsTr("Could not scan storage categories.");
+                    console.warn("Storage scan returned invalid data:", error);
                 }
-                root.scanning = false;
             }
         }
         onExited: (code, status) => {
@@ -418,6 +471,30 @@ print(json.dumps(items))`
     }
 
     Process {
+        id: trashProcess
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const result = JSON.parse(text.trim());
+                    if (!result.ok)
+                        root.errorText = (result.errors ?? []).join(" · ") || qsTr("Could not empty Trash.");
+                    else
+                        root.errorText = qsTr("Trash emptied. Removed %1 items.").arg(result.removed ?? 0);
+                } catch (error) {
+                    root.errorText = qsTr("Could not read the Trash cleanup result.");
+                }
+            }
+        }
+        onExited: (code, status) => {
+            root.clearingTrash = false;
+            if (code === 0)
+                root.refresh(true);
+            else if (!root.errorText.length)
+                root.errorText = qsTr("Could not empty Trash.");
+        }
+    }
+
+    Process {
         id: ownerProcess
         stdout: StdioCollector {
             onStreamFinished: {
@@ -435,6 +512,11 @@ print(json.dumps(items))`
         anchors.fill: parent
 
         Flickable {
+            id: settingsScroller1
+            SettingsScrollHandler {
+                flickable: settingsScroller1
+            }
+
             anchors.fill: parent
             contentHeight: layout.implicitHeight
             clip: true
@@ -456,11 +538,11 @@ print(json.dumps(items))`
                     StyledText {
                         Layout.fillWidth: true
                         text: root.errorText
-                        color: root.errorText === qsTr("Cache cleared.") ? Colours.palette.m3primary : Colours.palette.m3error
+                        color: root.errorText.startsWith(qsTr("Cache cleared.")) || root.errorText.startsWith(qsTr("Trash emptied.")) ? Colours.palette.m3primary : Colours.palette.m3error
                         wrapMode: Text.Wrap
                     }
                     TextButton {
-                        visible: root.errorText !== qsTr("Cache cleared.")
+                        visible: !root.errorText.startsWith(qsTr("Cache cleared.")) && !root.errorText.startsWith(qsTr("Trash emptied."))
                         text: qsTr("Retry")
                         type: TextButton.Tonal
                         onClicked: {
@@ -496,6 +578,7 @@ print(json.dumps(items))`
                                 type: root.selectedMount === modelData.mount ? TextButton.Filled : TextButton.Tonal
                                 enabled: !root.refreshing && !root.scanning
                                 onClicked: {
+                                    root.userSelectedMount = true;
                                     root.selectedMount = modelData.mount;
                                     root.errorText = "";
                                     root.scanCategories();
@@ -615,6 +698,12 @@ print(json.dumps(items))`
                             enabled: !root.clearingCache
                             onClicked: root.confirmCacheClear = true
                         }
+                        TextButton {
+                            text: root.clearingTrash ? qsTr("Emptying Trash…") : qsTr("Empty Trash")
+                            type: TextButton.Tonal
+                            enabled: !root.clearingTrash
+                            onClicked: root.confirmTrashClear = true
+                        }
                     }
 
                     GridLayout {
@@ -635,7 +724,7 @@ print(json.dumps(items))`
 
                                 StateLayer {
                                     radius: Tokens.rounding.normal
-                                    disabled: root.scanning || root.listingFiles
+                                    disabled: root.listingFiles
                                     onClicked: root.openCategory(categoryCard.modelData)
                                 }
 
@@ -658,7 +747,7 @@ print(json.dumps(items))`
                                         }
                                         StyledText {
                                             Layout.fillWidth: true
-                                            text: root.formatBytes(categoryCard.modelData.size)
+                                            text: categoryCard.modelData.sizePending ? qsTr("Checking size…") : root.formatBytes(categoryCard.modelData.size)
                                             color: Colours.palette.m3onSurfaceVariant
                                             font.pointSize: Tokens.font.size.small
                                         }
@@ -960,11 +1049,11 @@ print(json.dumps(items))`
     Item {
         anchors.fill: parent
         z: 20
-        visible: root.selectedApp !== null || root.confirmCacheClear
+        visible: root.selectedApp !== null || root.confirmCacheClear || root.confirmTrashClear
         Rectangle {
             anchors.fill: parent
             color: Qt.alpha(Colours.palette.m3scrim, 0.62)
-            MouseArea { anchors.fill: parent; onClicked: { root.selectedApp = null; root.confirmCacheClear = false; root.confirmUninstall = false; } }
+            MouseArea { anchors.fill: parent; onClicked: { root.selectedApp = null; root.confirmCacheClear = false; root.confirmTrashClear = false; root.confirmUninstall = false; } }
         }
         StyledRect {
             anchors.centerIn: parent
@@ -983,21 +1072,21 @@ print(json.dumps(items))`
 
                 MaterialIcon {
                     Layout.alignment: Qt.AlignHCenter
-                    text: root.confirmCacheClear ? "cleaning_services" : "apps"
+                    text: root.confirmCacheClear ? "cleaning_services" : root.confirmTrashClear ? "delete_sweep" : "apps"
                     color: Colours.palette.m3primary
                     font.pointSize: Tokens.font.size.extraLarge * 2
                 }
                 StyledText {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    text: root.confirmCacheClear ? qsTr("Clear application cache?") : root.confirmUninstall ? qsTr("Uninstall %1?").arg(root.appPackage) : (root.selectedApp?.name ?? "")
+                    text: root.confirmCacheClear ? qsTr("Clear application cache?") : root.confirmTrashClear ? qsTr("Empty Trash permanently?") : root.confirmUninstall ? qsTr("Uninstall %1?").arg(root.appPackage) : (root.selectedApp?.name ?? "")
                     font.pointSize: Tokens.font.size.large
                     font.weight: 600
                     wrapMode: Text.Wrap
                 }
                 StyledText {
                     Layout.fillWidth: true
-                    visible: !root.confirmCacheClear && !root.confirmUninstall
+                    visible: !root.confirmCacheClear && !root.confirmTrashClear && !root.confirmUninstall
                     horizontalAlignment: Text.AlignHCenter
                     text: root.selectedApp ? `${root.selectedApp.path}\n${root.inspectingApp ? qsTr("Checking package ownership…") : root.appPackage ? qsTr("Installed by %1").arg(root.appPackage) : qsTr("Package ownership unavailable")}` : ""
                     color: Colours.palette.m3onSurfaceVariant
@@ -1006,9 +1095,9 @@ print(json.dumps(items))`
                 }
                 StyledText {
                     Layout.fillWidth: true
-                    visible: root.confirmCacheClear || root.confirmUninstall
+                    visible: root.confirmCacheClear || root.confirmTrashClear || root.confirmUninstall
                     horizontalAlignment: Text.AlignHCenter
-                    text: root.confirmCacheClear ? qsTr("This permanently removes items inside ~/.cache. Open applications may need to rebuild their cache afterward.") : qsTr("The package manager opens in a terminal where you can review the package removal before confirming it.")
+                    text: root.confirmCacheClear ? qsTr("This permanently removes items inside ~/.cache. Open applications may need to rebuild their cache afterward.") : root.confirmTrashClear ? qsTr("This permanently deletes every item in your Trash, including items on mounted drives. This cannot be undone.") : qsTr("The package manager opens in a terminal where you can review the package removal before confirming it.")
                     color: Colours.palette.m3onSurfaceVariant
                     wrapMode: Text.Wrap
                 }
@@ -1016,7 +1105,7 @@ print(json.dumps(items))`
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: Tokens.spacing.small
-                    visible: !root.confirmCacheClear && !root.confirmUninstall
+                    visible: !root.confirmCacheClear && !root.confirmTrashClear && !root.confirmUninstall
                     TextButton { text: qsTr("Launch"); type: TextButton.Tonal; enabled: Boolean(root.selectedApp?.desktopId); onClicked: root.launchApp() }
                     TextButton { text: qsTr("Open location"); type: TextButton.Tonal; enabled: Boolean(root.selectedApp?.path); onClicked: root.openAppLocation() }
                     TextButton { text: qsTr("Uninstall"); type: TextButton.Tonal; enabled: root.appPackage.length > 0; onClicked: root.confirmUninstall = true }
@@ -1025,22 +1114,22 @@ print(json.dumps(items))`
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: Tokens.spacing.small
-                    visible: root.confirmCacheClear || root.confirmUninstall
+                    visible: root.confirmCacheClear || root.confirmTrashClear || root.confirmUninstall
                     TextButton {
                         text: qsTr("Cancel")
                         type: TextButton.Tonal
-                        onClicked: { root.confirmCacheClear = false; root.confirmUninstall = false; }
+                        onClicked: { root.confirmCacheClear = false; root.confirmTrashClear = false; root.confirmUninstall = false; }
                     }
                     TextButton {
-                        text: root.clearingCache ? qsTr("Clearing…") : root.confirmCacheClear ? qsTr("Clear cache") : qsTr("Open package manager")
+                        text: root.clearingTrash ? qsTr("Emptying…") : root.clearingCache ? qsTr("Clearing…") : root.confirmTrashClear ? qsTr("Empty Trash") : root.confirmCacheClear ? qsTr("Clear cache") : qsTr("Open package manager")
                         type: TextButton.Filled
-                        enabled: !root.clearingCache
-                        onClicked: root.confirmCacheClear ? root.clearCache() : root.uninstallApp()
+                        enabled: !root.clearingCache && !root.clearingTrash
+                        onClicked: root.confirmTrashClear ? root.emptyTrash() : root.confirmCacheClear ? root.clearCache() : root.uninstallApp()
                     }
                 }
                 TextButton {
                     Layout.alignment: Qt.AlignHCenter
-                    visible: !root.confirmCacheClear && !root.confirmUninstall
+                    visible: !root.confirmCacheClear && !root.confirmTrashClear && !root.confirmUninstall
                     text: qsTr("Close")
                     type: TextButton.Text
                     onClicked: root.selectedApp = null
